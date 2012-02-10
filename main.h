@@ -8,7 +8,6 @@
 #include <gsl/gsl_histogram.h>
 #include <gsl/gsl_histogram2d.h>
 
-
 #define FAILURE 0
 #define SUCCESS 1
 
@@ -43,11 +42,9 @@
 #define ABS(a) ((a) < 0 ? -(a) : (a))
 #define SWAP(a,b) {swap = (a); (a) = (b); (b) = swap;}
 
-
 char MYNAME[100];
 size_t IDERR;
-double EPS=99.00;
-
+double EPS;
 
 /*----------------------------------------------------------------*
  *New types                                                       *
@@ -143,3 +140,22 @@ void printCount(const size_t *count, const size_t *total,  const size_t step);
 int checkFileExt(const char *s1, const char *s2);
 int roundToNi(double a);
 int compareDoubles(const void *a,const void *b);
+
+
+/*----------------------------------------------------------------*
+ *FITS                                                            *
+ *----------------------------------------------------------------*/
+
+void *readFits(const Config *para, int *bitpix, int *status, long naxes[2]);
+double convertCHAR(void *table, long i);
+double convertSHORT(void *table, long i);
+double convertLONG(void *table, long i);
+double convertFLOAT(void *table, long i);
+double convertDOUBLE(void *table, long i);
+
+#define BYTE_IMG      8
+#define SHORT_IMG    16
+#define LONG_IMG     32
+#define LONGLONG_IMG 64 
+#define FLOAT_IMG   -32 
+#define DOUBLE_IMG  -64

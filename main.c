@@ -1,5 +1,4 @@
 #include "main.h"
-#include "fitsio.h"
 
 /*
 ------------------------
@@ -15,11 +14,16 @@ of objects and computes one of the following tasks:
 3. Generates a random catalogue of objects inside/outside a mask. 
    venice -m mask.reg -r [OPTIONS]
 
+TO DO: 
+- separate the code that uses fits 
+to set the options in the MakeFile
+- adapt to be used with python
+
 Modifications:
 
 v 3.3 - Dec 2011
 - new option "-cd" to generate constant density
-- added option descriptif for venice -h
+- added option descriptions for venice -h
 v 3.2 - Nov 2011
 - new option "-seed number" for the random number generator
 v 3.1 - Oct 2011
@@ -70,22 +74,22 @@ First version.
 
 int main(int argc, char **argv)
 {
-  //Initialization
+  /* initialization */
   srand((unsigned int)time(NULL));
-  EPS = determineMachineEpsilon();
+  EPS   = determineMachineEpsilon();
   IDERR = determineSize_tError();
   Config para;  
   
-  //Tasks
-  switch (readParameters(argc,argv,&para)){
+  /* tasks */
+  switch (readParameters(argc,argv,&para)){ 
   case 1:
-    mask2d(&para);
+    mask2d(&para);     /* binary mask for visualization */
     break;
   case 2:
-    flagCat(&para);
+    flagCat(&para);    /* objects in/out of mask */
     break;
   case 3:
-    randomCat(&para);
+    randomCat(&para);  /* random catalogue */
     break;
   }
   return EXIT_SUCCESS;
@@ -98,7 +102,8 @@ int main(int argc, char **argv)
 int  mask2d(const Config *para){
   /*Return the mask in gsl histogram format and writes the mask in fileOut. 
     The limits are the extrema of the extreme polygons in fileRegIn. 
-    The pixel is set to 0 when inside the mask and 1 otherwise.
+    The pixel is set to 0 when inside the mask and 1 otherwise. 
+    For fits format, it writes the pixel value.
   */  
    
   int Npolys,poly_id,flag;
@@ -107,118 +112,62 @@ int  mask2d(const Config *para){
   
   FILE *fileOut = fopenAndCheck(para->fileOutName,"w");
 
-  gsl_histogram2d *mask = gsl_histogram2d_alloc(para->nx,para->ny);//Mask.
-  total = para->nx*para->ny;
+  gsl_histogram2d *mask = gsl_histogram2d_alloc(para->nx,para->ny);
+  total = para->nx*para->ny;  
   
-  if(checkFileExt(para->fileRegInName,".fits")){
-    if(para->coordType != CART){
-      fprintf(stderr,"%s: fits file detected. coordType should be set to CART for image coordinates. Exiting...\n",MYNAME);
-      exit(EXIT_FAILURE);
-    }
-    fitsfile *fptr; 
-    int bitpix, datatype, status = 0;
+  if(checkFileExt(para->fileRegInName,".fits")){           /* fits file */
     long fpixel[2], naxes[2];
-    fits_open_file(&fptr, para->fileRegInName, READONLY, &status);
-    if(status == FILE_NOT_OPENED){
-      fprintf(stderr,"%s: %s not found. Exiting...\n",MYNAME,para->fileRegInName);
-      exit(EXIT_FAILURE);
+    int bitpix, status = 0;
+    double (*convert)(void *,long );
+    
+    /* read fits file and put in table */
+    void *table = readFits(para,&bitpix,&status,naxes); 
+    
+    switch (bitpix){
+    case BYTE_IMG:
+      convert = convertCHAR;
+      break;
+    case SHORT_IMG:
+      convert = convertSHORT;
+      break;
+    case LONG_IMG:
+      convert = convertLONG;
+      break;
+    case FLOAT_IMG:
+      convert = convertFLOAT;
+      break;
+    case DOUBLE_IMG:
+      convert = convertDOUBLE;
+      break;
     }
-    fits_get_img_type(fptr,&bitpix, &status);
-    fits_get_img_size(fptr,2,naxes,&status);
-    fpixel[0] = fpixel[1] = 1;
+    
+    /* define limits */
     xmin[0] = xmin[1] = 1.0;
     xmax[0] = naxes[0];
     xmax[1] = naxes[1];
-    
-    //Or if the limits are defined by the user:
     if(para->minDefinied[0]) xmin[0] = para->min[0];
     if(para->maxDefinied[0]) xmax[0] = para->max[0];
     if(para->minDefinied[1]) xmin[1] = para->min[1];
     if(para->maxDefinied[1]) xmax[1] = para->max[1];
     
-    gsl_histogram2d_set_ranges_uniform(mask,xmin[0],xmax[0],xmin[1],xmax[1]);//Ranges of the mask.
+    gsl_histogram2d_set_ranges_uniform(mask,xmin[0],xmax[0],xmin[1],xmax[1]);
     
-    fprintf(stderr,"Reading fits file...");
-    if(bitpix == BYTE_IMG){
-      char *table = (char *)malloc(naxes[0]*naxes[1]*sizeof(char)); 
-      fits_read_pix(fptr,TSBYTE,fpixel,naxes[0]*naxes[1],NULL,table,NULL,&status);
-      printf("%d\n",table[0]);
-    }else if(bitpix == SHORT_IMG){
-      short *table = (short *)malloc(naxes[0]*naxes[1]*sizeof(short)); 
-      fits_read_pix(fptr,TSHORT,fpixel,naxes[0]*naxes[1],NULL,table,NULL,&status);
-      fprintf(stderr,"\nProgress =     ");
-      for(i=0; i<mask->nx; i++){
-	for(j=0; j<mask->ny; j++){
-	  count = i*para->ny+j;
-	  printCount(&count,&total,1000);
-	  //Center of the pixel.
-	  x[0] = (mask->xrange[i]+mask->xrange[i+1])/2.0;
-	  x[1] = (mask->yrange[j]+mask->yrange[j+1])/2.0;
-	  fpixel[0] = roundToNi(x[0]) - 1;
-	  fpixel[1] = roundToNi(x[1]) - 1;
-	  mask->bin[i*mask->ny+j] = (double)table[fpixel[1]*naxes[0]+fpixel[0]];
-	}
+    /* convert in double */
+    fprintf(stderr,"\nProgress =     ");
+    for(i=0; i<mask->nx; i++){
+      for(j=0; j<mask->ny; j++){
+	count = i*para->ny+j;
+	printCount(&count,&total,1000);
+	x[0] = (mask->xrange[i]+mask->xrange[i+1])/2.0;  /* center of the pixel */
+	x[1] = (mask->yrange[j]+mask->yrange[j+1])/2.0;
+	fpixel[0] = roundToNi(x[0]) - 1;
+	fpixel[1] = roundToNi(x[1]) - 1;
+	mask->bin[i*mask->ny+j] = convert(table,fpixel[1]*naxes[0]+fpixel[0]);
       }
-      fprintf(stderr,"\b\b\b\b100%%\n");
-    }else if(bitpix == LONG_IMG){
-      long *table = (long *)malloc(naxes[0]*naxes[1]*sizeof(long)); 
-      fits_read_pix(fptr,TLONG,fpixel,naxes[0]*naxes[1],NULL,table,NULL,&status);
-      fprintf(stderr,"\nProgress =     ");
-      for(i=0; i<mask->nx; i++){
-	for(j=0; j<mask->ny; j++){
-	  count = i*para->ny+j;
-	  printCount(&count,&total,1000);
-	  //Center of the pixel.
-	  x[0] = (mask->xrange[i]+mask->xrange[i+1])/2.0;
-	  x[1] = (mask->yrange[j]+mask->yrange[j+1])/2.0;
-	  fpixel[0] = roundToNi(x[0]) - 1;
-	  fpixel[1] = roundToNi(x[1]) - 1;
-	  mask->bin[i*mask->ny+j] = (double)table[fpixel[1]*naxes[0]+fpixel[0]];
-	}
-      }
-      fprintf(stderr,"\b\b\b\b100%%\n");
-    }else if(bitpix == FLOAT_IMG){
-      float *table = (float *)malloc(naxes[0]*naxes[1]*sizeof(float)); 
-      fits_read_pix(fptr,TLONG,fpixel,naxes[0]*naxes[1],NULL,table,NULL,&status);
-      fprintf(stderr,"\nProgress =     ");
-      for(i=0; i<mask->nx; i++){
-	for(j=0; j<mask->ny; j++){
-	  count = i*para->ny+j;
-	  printCount(&count,&total,1000);
-	  //Center of the pixel.
-	  x[0] = (mask->xrange[i]+mask->xrange[i+1])/2.0;
-	  x[1] = (mask->yrange[j]+mask->yrange[j+1])/2.0;
-	  fpixel[0] = roundToNi(x[0]) - 1;
-	  fpixel[1] = roundToNi(x[1]) - 1;
-	  mask->bin[i*mask->ny+j] = (double)table[fpixel[1]*naxes[0]+fpixel[0]];
-	}
-      }
-      fprintf(stderr,"\b\b\b\b100%%\n");
-    }else if(bitpix == DOUBLE_IMG){
-      double *table = (double *)malloc(naxes[0]*naxes[1]*sizeof(double)); 
-      fits_read_pix(fptr,TLONG,fpixel,naxes[0]*naxes[1],NULL,table,NULL,&status);
-      fprintf(stderr,"\nProgress =     ");
-      for(i=0; i<mask->nx; i++){
-	for(j=0; j<mask->ny; j++){
-	  count = i*para->ny+j;
-	  printCount(&count,&total,1000);
-	  //Center of the pixel.
-	  x[0] = (mask->xrange[i]+mask->xrange[i+1])/2.0;
-	  x[1] = (mask->yrange[j]+mask->yrange[j+1])/2.0;
-	  fpixel[0] = roundToNi(x[0]) - 1;
-	  fpixel[1] = roundToNi(x[1]) - 1;
-	  mask->bin[i*mask->ny+j] = (double)table[fpixel[1]*naxes[0]+fpixel[0]];
-	}
-      }
-      fprintf(stderr,"\b\b\b\b100%%\n");
-    }else{
-      fprintf(stderr,"\n%s: bad format for fits file. Please edit source code. Exiting...\n",MYNAME);
-      exit(EXIT_FAILURE);
     }
-    fits_close_file(fptr, &status);
-    if (status)         
-      fits_report_error(stderr, status);
-  }else if(checkFileExt(para->fileRegInName,".reg")){
+    fprintf(stderr,"\b\b\b\b100%%\n");
+    
+  }else if(checkFileExt(para->fileRegInName,".reg")){          /* ds9 file */
     
     FILE *fileRegIn = fopenAndCheck(para->fileRegInName,"r");
     Node *polyTree  = readPolygonFileTree(fileRegIn,xmin,xmax);
@@ -226,16 +175,16 @@ int  mask2d(const Config *para){
     Npolys          = polyTree->Npolys;
     fclose(fileRegIn);
     
-     //Or if the limits are defined by the user:
+    /* define limits */
     if(para->minDefinied[0]) xmin[0] = para->min[0];
     if(para->maxDefinied[0]) xmax[0] = para->max[0];
     if(para->minDefinied[1]) xmin[1] = para->min[1];
     if(para->maxDefinied[1]) xmax[1] = para->max[1];
     
-    //Reference point. It must be outside the mask;
+    /* reference point. It must be outside the mask */
     x0[0] = xmin[0] - 1.0; x0[1] = xmin[1] - 1.0;
     
-    gsl_histogram2d_set_ranges_uniform(mask,xmin[0],xmax[0],xmin[1],xmax[1]);//Ranges of the mask.
+    gsl_histogram2d_set_ranges_uniform(mask,xmin[0],xmax[0],xmin[1],xmax[1]);
     
     total = para->nx*para->ny;
     
@@ -244,21 +193,21 @@ int  mask2d(const Config *para){
       for(j=0; j<mask->ny; j++){
 	count = i*para->ny+j;
 	printCount(&count,&total,1000);
-	//Center of the pixel.
-	x[0] = (mask->xrange[i]+mask->xrange[i+1])/2.0;
+   	x[0] = (mask->xrange[i]+mask->xrange[i+1])/2.0; /* center of the pixel */
 	x[1] = (mask->yrange[j]+mask->yrange[j+1])/2.0;
-	//1 = outside the mask, 0 = inside the mask      
+	/* 1 = outside the mask, 0 = inside the mask */     
 	if(!insidePolygonTree(polyTree,x0,x,&poly_id)) mask->bin[i*mask->ny+j] = 1.0;
       }
     }
     fflush(stdout);
     fprintf(stderr,"\b\b\b\b100%%\n");
   }else{
-    fprintf(stderr,"%s: mask file format not recognized. Please provide .reg, .fits or no mask with input limits. Exiting...\n",MYNAME);
+    fprintf(stderr,"%s: mask file format not recognized. Please provide .reg, .fits or no mask but input limits. Exiting...\n",MYNAME);
     exit(EXIT_FAILURE);
   }
   
-  //Write the output file
+  
+  /* write the output file */
   for(j=0; j<mask->ny; j++){
     for(i=0; i<mask->nx; i++){
       fprintf(fileOut,"%f ",mask->bin[i*mask->ny+j]);
@@ -268,9 +217,7 @@ int  mask2d(const Config *para){
   fclose(fileOut);
   
   return EXIT_SUCCESS;
-
 }
-
 
 int flagCat(const Config *para){
   /*Reads fileCatIn and add a flag at the end of the line. 1 is outside
@@ -290,6 +237,7 @@ int flagCat(const Config *para){
   rewind(fileCatIn);
   fprintf(stderr,"Nobjects = %zd\n",N);
   
+  /*
   if(checkFileExt(para->fileRegInName,".fits")){
     if(para->coordType != CART){
       fprintf(stderr,"%s: fits file detected. coordType should be set to CART for image coordinates. Exiting...\n",MYNAME);
@@ -440,7 +388,9 @@ int flagCat(const Config *para){
     fits_close_file(fptr, &status);
     if (status)         
       fits_report_error(stderr, status);
-  }else if(checkFileExt(para->fileRegInName,".reg")){
+      }else */
+
+  if(checkFileExt(para->fileRegInName,".reg")){
     FILE *fileRegIn = fopenAndCheck(para->fileRegInName,"r");
     Node *polyTree  = readPolygonFileTree(fileRegIn,xmin,xmax);
     Polygon *polys = (Polygon *)polyTree->polysAll;
@@ -509,6 +459,7 @@ int randomCat(const Config *para){
   
   FILE *fileOut = fopenAndCheck(para->fileOutName,"w");
   
+  /*
   if(checkFileExt(para->fileRegInName,".fits")){
     if(para->coordType != CART){
       fprintf(stderr,"%s: fits file detected. coordType should be set to CART for image coordinates. Exiting...\n",MYNAME);
@@ -608,7 +559,10 @@ int randomCat(const Config *para){
     fits_close_file(fptr, &status);
     if (status)         
       fits_report_error(stderr, status);
-  }else if(checkFileExt(para->fileRegInName,".reg")){
+  }else
+
+  */
+  if(checkFileExt(para->fileRegInName,".reg")){
     
     FILE *fileRegIn = fopenAndCheck(para->fileRegInName,"r");
     Node *polyTree  = readPolygonFileTree(fileRegIn,xmin,xmax);
@@ -755,7 +709,7 @@ int readParameters(int argc, char **argv, Config *para){
       fprintf(stderr,"Options:\n");
       fprintf(stderr,"    -o FILE                  output file name, default:stdout\n");
       fprintf(stderr,"    -f [outside,inside,all]  output format, default:outside\n");
-      fprintf(stderr,"    -[x,y]col N              column id for x and y (start at 1)\n");
+      fprintf(stderr,"    -[x,y]col N              column id for x and y (starts at 1)\n");
       fprintf(stderr,"    -coord [cart,spher]      coordinate type, default:cart\n");
       fprintf(stderr,"    -[x,y]min value          lower limit for x and y\n");
       fprintf(stderr,"    -[x,y]max value          upper limit for x and y\n");
@@ -1023,11 +977,8 @@ int insidePolygon(Polygon *polys, int Npolys, double x0, double y0, double x, do
 }
 
 Polygon *readPolygonFile(FILE *fileIn, int *Npolys, Node *polyTree){
-  
   Polygon *result = malloc(sizeof(Polygon));
   return result;
-
-
 }
 
 Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
@@ -1319,7 +1270,6 @@ void printCount(const size_t *count, const size_t *total, const size_t step){
   return;
 }
 
-
 int checkFileExt(const char *s1, const char *s2){
   /*Checks if s2 matches s1 extension*/
   size_t ext = strlen(s1) - strlen(s2);
@@ -1344,4 +1294,25 @@ int compareDoubles(const void *a,const void *b){
     return -1;
   else 
     return 0;
+}
+
+double convertCHAR(void *table, long i){
+  char *result = (char *)table;
+  return (double)(result[i]);
+}
+double convertSHORT(void *table, long i){
+  short *result = (short *)table;
+  return (double)(result[i]);
+}
+double convertLONG(void *table, long i){
+  long *result = (long *)table;
+  return (double)(result[i]);
+}
+double convertFLOAT(void *table, long i){
+  float *result = (float *)table;
+  return (double)(result[i]);
+}
+double convertDOUBLE(void *table, long i){
+  double *result = (double *)table;
+  return result[i];
 }

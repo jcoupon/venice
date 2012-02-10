@@ -1,23 +1,26 @@
-
 #------------------------------------------------#
-#Makefile for venice. Edit the following lines 
-#to change the current configuration:
+#Makefile for venice                             #	
+#------------------------------------------------#
 
 CC	= icc
+FITS    = yes
+
+ifeq ($(FITS),yes)
+   SRC	   = main.c fits.c
+   LDFLAGS = -L$(HOME)/local/lib -lgsl -lgslcblas  -lm -lcfitsio
+else
+   SRC  = main.c withoutFits.c
+   LDFLAGS = -L$(HOME)/local/lib -lgsl -lgslcblas  -lm
+endif
+
 CFLAGS	= -I$(HOME)/local/include #-Wall -Wuninitialized -O3 -fPIC
-LDFLAGS	= -L$(HOME)/local/lib -lgsl -lgslcblas  -lm -lcfitsio
-#LDFLAGS	= -L$(HOME)/local/lib -lgsl -lgslcblas  -lm 	
 EXEC	= venice
-SRC	= main.c
-#SRC	= main_nofits.c
 OBJ	= $(SRC:.c=.o)
 
 all: $(EXEC)
 
 $(EXEC) : $(OBJ)
 	$(CC) -o $@ $^ $(LDFLAGS)
-
-main.o: main.h
 
 %.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS)

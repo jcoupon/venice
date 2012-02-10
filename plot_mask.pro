@@ -9,8 +9,7 @@ mask = dblarr(DX,DY)
 openr, lun, FILE, /get_lun
 readf, lun, mask
 
-
-mask_reversed=alog(REVERSE(mask)+1e-3)
+mask_reversed=alog(REVERSE(ABS(mask))+1e-3)
 
 if (ips) then begin
     psfile = "field.ps"
