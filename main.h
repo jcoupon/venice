@@ -11,45 +11,40 @@
 #define FAILURE 0
 #define SUCCESS 1
 
-#define PI 3.14159265358979323846
+#define PI    3.14159265358979323846
 #define TWOPI 6.283185307179586476925287
 
 //#define EPS 1.0e-10
-#define INF 1.0e30
-#define ODD 0
-#define EVEN 1
-#define LEAF 0
-#define NODE 1
+#define INF   1.0e30
+#define ODD   0
+#define EVEN  1
+#define LEAF  0
+#define NODE  1
 #define RADEC 0
-#define CART 1
+#define CART  1
 
 #define MAX(x,y) ((x) > (y)) ? (x) : (y)
 #define MIN(x,y) ((x) < (y)) ? (x) : (y)
 #define ABS(a) ((a) < 0 ? -(a) : (a))
 #define PARITY(a) (a)%2 ? ODD : EVEN
 
-#define NFIELD 100
-#define NCHAR 20
+#define NFIELD    100
+#define NCHAR     20
 #define NVERTICES 100
 
 #define getDoubleValue(array,col)  atof(array+NCHAR*(col-1))
-#define getIntValue(array,col)  atoi(array+NCHAR*(col-1))
-#define getCharValue(array,col) array+NCHAR*(col-1)
-#define getLine(array,i) array+NFIELD*NCHAR*i
+#define getIntValue(array,col)     atoi(array+NCHAR*(col-1))
+#define getCharValue(array,col)    array+NCHAR*(col-1)
+#define getLine(array,i)           array+NFIELD*NCHAR*i
 
 #define MAX(x,y) ((x) > (y)) ? (x) : (y)
 #define MIN(x,y) ((x) < (y)) ? (x) : (y)
 #define ABS(a) ((a) < 0 ? -(a) : (a))
 #define SWAP(a,b) {swap = (a); (a) = (b); (b) = swap;}
 
-char MYNAME[100];
-size_t IDERR;
-double EPS;
-
 /*----------------------------------------------------------------*
  *New types                                                       *
  *----------------------------------------------------------------*/
-
 
 typedef struct Config
 {
@@ -92,13 +87,13 @@ typedef struct Node
   void *Left, *Right;
 } Node;
 
-
 /*----------------------------------------------------------------*
  *Global variables                                                *
  *----------------------------------------------------------------*/
-FILE *FILE_REG_IN,*FILE_CAT_IN, *FILE_OUT;
-int NX,NY,XCOL,YCOL,NPART,FORMAT;
-double *LIMITS;
+
+char   MYNAME[100];
+size_t IDERR;
+double EPS;
 
 /*----------------------------------------------------------------*
  *Main routines                                                   *
@@ -141,12 +136,11 @@ int checkFileExt(const char *s1, const char *s2);
 int roundToNi(double a);
 int compareDoubles(const void *a,const void *b);
 
-
 /*----------------------------------------------------------------*
  *FITS                                                            *
  *----------------------------------------------------------------*/
 
-void *readFits(const Config *para, int *bitpix, int *status, long naxes[2]);
+void *readFits(const Config *para, int *bitpix, int *status, long naxes[2], double (**convert)(void *,long ));
 double convertCHAR(void *table, long i);
 double convertSHORT(void *table, long i);
 double convertLONG(void *table, long i);

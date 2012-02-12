@@ -1,10 +1,15 @@
 ------------------------------
-Jean Coupon - 2009, 2010, 2011
+Jean Coupon - 2009, 2012
 ------------------------------
 
 README for venice, a mask utility program
 
-v3.3
+v3.4
+
+------------------------
+I. INSTALLATION
+------------------------
+
 To compile it, you need to install the gsl and cfitsio 
 libraries (http://www.gnu.org/software/gsl/, 
 http://heasarc.gsfc.nasa.gov/fitsio/) and edit the Makefile
@@ -17,12 +22,28 @@ simply edit Makefile or type (only tested with gcc and icc):
 >make CC=my_favorite_compiler
 
 You may want to use venice without fits support (for example 
-if you're using only [.reg,.fits] masks). This can be done by replacing
-main.c by main_nofits.c in Makefile and comment out -lcfitsio
+if you're using only [.reg] masks). This can be done by typing:
+> make FITS=no
 
-Usage: venice -m mask[.reg,.fits] [OPTIONS]
-       or venice -m mask[.reg,.fits] -cat file.cat [OPTIONS]
-       or venice -m mask[.reg,.fits] -r [OPTIONS]
+------------------------
+II. USAGE
+------------------------
+
+Usage: venice -m mask.[reg,fits]               [OPTIONS] -> binary mask for visualization
+    or venice -m mask.[reg,fits] -cat file.cat [OPTIONS] -> objects in/out of mask
+    or venice -m mask.[reg,fits] -r            [OPTIONS] -> random catalogue
+
+Options:
+    -o FILE                  output file name, default:stdout
+    -f [outside,inside,all]  output format, default:outside
+    -[x,y]col N              column id for x and y (starts at 1)
+    -coord [cart,spher]      coordinate type, default:cart
+    -[x,y]min value          lower limit for x and y
+    -[x,y]max value          upper limit for x and y
+    -seed  N                 random seed
+    -npart N                 number of random objects
+    -cd                      multiply npart by the mask area (for constant density)
+    -h, --help               this message
 
 IMPORTANT NOTICES:
 - the general convention for venice is 
@@ -40,7 +61,7 @@ IMPORTANT NOTICES:
   is prompted to the standard output (i.e. the terminal).
 
 ------------------------
-DESCRIPTION
+III. DESCRIPTION
 ------------------------
 
 Programs that reads a mask file (DS9 type) and a catalogue 
@@ -72,9 +93,8 @@ For all the program, the convention used is 0 when the object
 is INSIDE the mask and 1 when the object is OUTSIDE.
 
 ------------------------
-USAGE
+IV. OPTIONS
 ------------------------
-
 
 ------------------------
 1. Creates a pixelized mask
@@ -220,7 +240,7 @@ the number of objects "outside" will be < npart. Tip:
 the ratio n_outside/npart is the unmasked area of your field (=1 if no mask).
 
 ------------------------
-Example
+Examples
 ------------------------
 
 How to create a random catalogue random.cat (mask file mask[.reg,.fits])
