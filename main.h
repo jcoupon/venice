@@ -99,6 +99,9 @@ double EPS;
  *Main routines                                                   *
  *----------------------------------------------------------------*/
 
+void testPython();
+
+
 int mask2d(const Config *para);
 int flagCat(const Config *para);
 int randomCat(const Config *para);

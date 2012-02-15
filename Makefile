@@ -2,20 +2,21 @@
 #Makefile for venice                             #	
 #------------------------------------------------#
 
-CC	= icc
-FITS    = yes
+CC             = icc
+FITS           = yes
+SRC            = main.c
+LDFLAGS        = -L$(HOME)/local/lib -lgsl -lgslcblas -lm
+CFLAGS_PYTHON  = -I/usr/include/python2.6
+LDFLAGS_PYTHON = -ldl -lpython2.6
 
 ifeq ($(FITS),yes)
-   SRC	   = main.c fits.c
-   FITSLIB = -lcfitsio
-   LDFLAGS = -L$(HOME)/local/lib -lgsl -lgslcblas  -lm 
+   LDFLAGS += -lcfitsio
+   SRC     += fits.c
 else
-   SRC  = main.c withoutFits.c
-   FITSLIB = 
+   SRC     += withoutFits.c
 endif
 
-LDFLAGS = -L$(HOME)/local/lib -lgsl -lgslcblas -lm $(FITSLIB)
-CFLAGS	= -I$(HOME)/local/include #-Wall -Wuninitialized -O3 -fPIC
+CFLAGS	= -I$(HOME)/local/include -fPIC #-Wall -Wuninitialized -O3 
 EXEC	= venice
 OBJ	= $(SRC:.c=.o)
 
@@ -30,10 +31,15 @@ $(EXEC) : $(OBJ)
 .PHONY: clean mrproper
 
 clean:
-	rm -rf *.o $(EXEC).tar
+	rm -rf *.o $(EXEC).tar *.so $(EXEC)py.py $(EXEC)py.pyc $(SRC:.c=_wrap.c)
 
 mrproper: clean
 	rm -rf $(EXEC)
 
 tar: 
 	tar cvf $(EXEC).tar Makefile *.c *.h README
+
+python:
+	swig -python main.i	
+	$(CC) -c $(SRC) main_wrap.c $(CFLAGS) $(CFLAGS_PYTHON)
+	$(CC) -bundle $(SRC:.c=.o) main_wrap.o -o _$(EXEC)py.so $(LDFLAGS) $(LDFLAGS_PYTHON)

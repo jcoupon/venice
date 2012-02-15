@@ -20,6 +20,9 @@ TO DO:
 
 Modifications:
 
+v 3.5 - Feb. 2012
+- started to implement a python wrapper. 
+Contributor: Ben Granett
 v 3.4 - Feb. 2012
 - improved treatment of FITS masks
 - now able to compile without FITS support with 
@@ -75,6 +78,11 @@ V 1.00 - March 26th 2008
 First version.
 */
 
+void testPython(){
+  /* test for python */
+  fprintf(stderr,"Hello world\n");
+}
+
 int main(int argc, char **argv)
 {
   /* initialization */
@@ -84,7 +92,7 @@ int main(int argc, char **argv)
   Config para;  
   
   /* tasks */
-  switch (readParameters(argc,argv,&para)){ 
+  switch (readParameters(argc,argv,&para)){
   case 1:
     mask2d(&para);     /* binary mask for visualization */
     break;
@@ -107,7 +115,7 @@ int  mask2d(const Config *para){
     The limits are the extrema of the extreme polygons in fileRegIn. 
     The pixel is set to 0 when inside the mask and 1 otherwise. 
     For fits format, it writes the pixel value.
-  */  
+  */
    
   int Npolys,poly_id,flag;
   size_t i, j, count, total;
@@ -224,7 +232,7 @@ int flagCat(const Config *para){
   double x[2], x0[2], xmin[2], xmax[2];
   char line[NFIELD*NCHAR], item[NFIELD*NCHAR],*str_end;
   
-  FILE *fileOut = fopenAndCheck(para->fileOutName,"w");
+  FILE *fileOut   = fopenAndCheck(para->fileOutName,"w");
   FILE *fileCatIn = fopenAndCheck(para->fileCatInName,"r");
 
   N = 0;
@@ -520,7 +528,6 @@ int readParameters(int argc, char **argv, Config *para){
   para->seed      = 20091982;
   para->constDen  = 0;
   
-
   for(i=0;i<2;i++){
     para->minDefinied[i] = 0;
     para->maxDefinied[i] = 0;
@@ -537,7 +544,7 @@ int readParameters(int argc, char **argv, Config *para){
     //Help-------------------------------------------------------------------//
     if(!strcmp(argv[i],"-h") || !strcmp(argv[i],"--help") || argc == 1){
       fprintf(stderr,"\n\n                   V E N I C E\n\n");
-      fprintf(stderr,"           mask utility program version 3.4 \n\n");
+      fprintf(stderr,"           mask utility program version 3.5 \n\n");
       fprintf(stderr,"Usage: %s -m mask.[reg,fits]               [OPTIONS] -> binary mask for visualization\n",argv[0]);
       fprintf(stderr,"    or %s -m mask.[reg,fits] -cat file.cat [OPTIONS] -> objects in/out of mask\n",argv[0]);
       fprintf(stderr,"    or %s -m mask.[reg,fits] -r            [OPTIONS] -> random catalogue\n",argv[0]);
