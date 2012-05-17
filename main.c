@@ -420,7 +420,7 @@ int randomCat(const Config *para){
     /* reference point. It must be outside the mask */
     x0[0] = xmin[0] - 1.0; x0[1] = xmin[1] - 1.0;
     
-    fprintf(stderr,"xmin = %f \nxmax = %f \nymin = %f \nymax = %f\n",xmin[0],xmax[0],xmin[1],xmax[1]);
+    //fprintf(stderr,"xmin = %f \nxmax = %f \nymin = %f \nymax = %f\n",xmin[0],xmax[0],xmin[1],xmax[1]);
     if(para->coordType == RADEC){
       area = (xmax[0] - xmin[0])*(sin(xmax[1]*PI/180.0) - sin(xmin[1]*PI/180.0))*180.0/PI;
     }else{
