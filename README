@@ -4,7 +4,7 @@ Jean Coupon - 2009, 2012
 
 README for venice, a mask utility program
 
-v3.5
+v3.6
 
 ------------------------
 I. INSTALLATION
@@ -40,6 +40,7 @@ Options:
     -coord [cart,spher]      coordinate type, default:cart
     -[x,y]min value          lower limit for x and y
     -[x,y]max value          upper limit for x and y
+    -nz file_nz.in           redshift distribution for random objects
     -seed  N                 random seed
     -npart N                 number of random objects
     -cd                      multiply npart by the mask area (for constant density)
@@ -59,6 +60,9 @@ IMPORTANT NOTICES:
   pixel value added at the end of the line
 - if no output file is provided (-o OUTFILE), the result
   is prompted to the standard output (i.e. the terminal).
+- the format for file_nz.in should be: z n(z) in histogram form. 
+  GSL convention: bin[i] corresponds to range[i] <= x < range[i+1]
+  the upper limit for the last bin is set to 100
 
 ------------------------
 III. DESCRIPTION
@@ -234,6 +238,9 @@ Options
 	with no mask), you have to define all of these values.
 	-seed number (must be > 0), the seed for the GSL 
 	random generator (default: 20091982)
+        -nz file_nz.in, provides a redshift distribution for random 
+	objects (format: z n(z)). A redshift for each object is 
+	randomly drawn according to this distribution
 	
 IMPORTANT: "npart" is the number of DRAWN objects, then if the mask is not empty
 the number of objects "outside" will be < npart. Tip: 
@@ -249,7 +256,7 @@ that contains only objects outside the mask.
      venice -m mask[.reg,.fits] -r -f outside -npart 10000000 -o random.cat -seed 1234567
 
 How to create a random catalogue between 0.0 and 1.0 in both coordinates
-with no mask.
+with no mask, following a redshift distribution given in file_nz.in.
 
-    venice -r -xmin 0.0 -xmax 1.0 -ymin 0.0 -ymax 1.0
+    venice -r -xmin 0.0 -xmax 1.0 -ymin 0.0 -ymax 1.0 -nz file_nz.in
 

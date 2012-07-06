@@ -51,6 +51,8 @@ typedef struct Config
   char fileRegInName[1000];
   char fileCatInName[1000];
   char fileOutName[1000];
+  char fileNofZName[1000];
+  int nz;
   int nx,ny,format;
   int xcol,ycol;
   int coordType, constDen;

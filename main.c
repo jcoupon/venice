@@ -2,7 +2,7 @@
 
 /*
 ------------------------
-Jean Coupon - Feb 2012
+Jean Coupon - Jul 2012
 main.c for "venice"
 ------------------------
 
@@ -20,6 +20,10 @@ TO DO:
 
 Modifications:
 
+v 3.6 - Jul. 2012
+- a redshift distribution can now be given in a form
+  of an file with histogram through the 
+  option "-nz file_nz.in".
 v 3.5 - Feb. 2012
 - started to implement a python wrapper. 
 Contributor: Ben Granett
@@ -355,10 +359,44 @@ int randomCat(const Config *para){
   
   int Npolys,poly_id,flag;
   size_t i, npart;
-  double x[2], x0[2], xmin[2], xmax[2], area;
+  double x[2], x0[2], xmin[2], xmax[2], z, area;
   gsl_rng *r = randomInitialize(para->seed);
   
   FILE *fileOut = fopenAndCheck(para->fileOutName,"w");
+  
+  /* load redshift distribution */
+  /* GSL convention: bin[i] corresponds to range[i] <= x < range[i+1] */
+  FILE *fileNofZ;
+  size_t Nbins, Ncol;
+  char line[NFIELD*NCHAR], item[NFIELD*NCHAR];
+  
+  gsl_histogram *nz;
+  gsl_histogram_pdf *nz_PDF;
+
+  if(para->nz){
+    fileNofZ = fopenAndCheck("test/nz.out","r");
+    
+    Nbins= 0;
+    while(fgets(line,NFIELD*NCHAR, fileNofZ) != NULL)
+      if(getStrings(line,item," ",&Ncol))  Nbins++;
+    rewind(fileNofZ);
+    fprintf(stderr,"Nbins = %zd\n",Nbins);
+    
+    nz = gsl_histogram_alloc(Nbins);
+    nz_PDF = gsl_histogram_pdf_alloc (Nbins);
+    
+    i = 0;
+    while(fgets(line,NFIELD*NCHAR, fileNofZ) != NULL){
+      if(getStrings(line,item," ",&Ncol)){
+	nz->range[i] = getDoubleValue(item, 1);
+	nz->bin[i]   = getDoubleValue(item, 2);
+	i++;
+      }
+    }
+    /* gsl structure requires an upper limit for the last bin*/
+    nz->range[i]   = 100.0;
+    gsl_histogram_pdf_init (nz_PDF, nz);
+  }
   
   if(checkFileExt(para->fileRegInName,".fits")){
     
@@ -394,10 +432,15 @@ int randomCat(const Config *para){
       x[1] = gsl_ran_flat(r,xmin[1],xmax[1]);
       fpixel[0] = roundToNi(x[0]) - 1;
       fpixel[1] = roundToNi(x[1]) - 1;
-      fprintf(fileOut,"%f %f %g\n",x[0],x[1],convert(table,fpixel[1]*naxes[0]+fpixel[0]));
+      if(para->nz){
+	z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
+	fprintf(fileOut,"%f %f %g %f\n", x[0], x[1], convert(table,fpixel[1]*naxes[0]+fpixel[0]), z);
+      }else{
+	fprintf(fileOut,"%f %f %g\n", x[0], x[1], convert(table,fpixel[1]*naxes[0]+fpixel[0]));
+      }
     }
     fprintf(stderr,"\b\b\b\b100%%\n");
-   
+    
     free(table);
     
   }else if(checkFileExt(para->fileRegInName,".reg")){
@@ -448,15 +491,29 @@ int randomCat(const Config *para){
       }
       /* 1 = outside the mask, 0 = inside the mask */     
       if(flag=0,!insidePolygonTree(polyTree,x0,x,&poly_id)) flag = 1;
-      switch (para->format){
-      case 1: /* only objects outside the mask */
-	if(flag) fprintf(fileOut,"%f %f\n",x[0],x[1]);
-	break;
-      case 2: /* only objects inside the mask */
-	if(!flag) fprintf(fileOut,"%f %f\n",x[0],x[1]);
-	break;
-      case 3: /* all objects with the flag */
-	fprintf(fileOut,"%f %f %d\n",x[0],x[1],flag);
+      if(para->nz){
+	z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
+	switch (para->format){
+	case 1: /* only objects outside the mask */
+	  if(flag) fprintf(fileOut,"%f %f %f\n",x[0],x[1],z);
+	  break;
+	case 2: /* only objects inside the mask */
+	  if(!flag) fprintf(fileOut,"%f %f %f\n",x[0],x[1],z);
+	  break;
+	case 3: /* all objects with the flag */
+	  fprintf(fileOut,"%f %f %d %f\n",x[0],x[1],flag,z);
+	}
+      }else{
+	switch (para->format){
+	case 1: /* only objects outside the mask */
+	  if(flag) fprintf(fileOut,"%f %f\n",x[0],x[1]);
+	  break;
+	case 2: /* only objects inside the mask */
+	  if(!flag) fprintf(fileOut,"%f %f\n",x[0],x[1]);
+	  break;
+	case 3: /* all objects with the flag */
+	  fprintf(fileOut,"%f %f %d\n",x[0],x[1],flag);
+	}
       }
     }
     fprintf(stderr,"\b\b\b\b100%%\n");
@@ -477,7 +534,7 @@ int randomCat(const Config *para){
     fprintf(stderr,"Area = %f\n",area);
     
     if(para->constDen){
-      npart =  (size_t)round((double)para->npart*area);
+      npart = (size_t)round((double)para->npart*area);
     }else{
       npart = para->npart;
     }
@@ -488,11 +545,16 @@ int randomCat(const Config *para){
       if(para->coordType == CART){
 	x[0] = gsl_ran_flat(r,xmin[0],xmax[0]);
 	x[1] = gsl_ran_flat(r,xmin[1],xmax[1]);
-	fprintf(fileOut,"%f %f\n",x[0],x[1]);
       }else{
 	x[0] = gsl_ran_flat(r,xmin[0],xmax[0]);
 	x[1] = gsl_ran_flat(r,sin(xmin[1]*PI/180.0),sin(xmax[1]*PI/180.0));
-	fprintf(fileOut,"%f %f\n",x[0], asin(x[1])*180.0/PI);
+	x[1] = asin(x[1])*180.0/PI;
+      }
+      if(para->nz){
+	z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
+	fprintf(fileOut,"%f %f %f\n", x[0], x[1], z);
+      }else{
+	fprintf(fileOut,"%f %f\n", x[0], x[1]);
       }
     }
     fflush(stdout);
@@ -501,6 +563,11 @@ int randomCat(const Config *para){
   }else{
     fprintf(stderr,"%s: mask file format not recognized. Please provide .reg, .fits or no mask with input limits. Exiting...\n",MYNAME);
     exit(EXIT_FAILURE);
+  }
+  
+  if(para->nz){
+    gsl_histogram_pdf_free (nz_PDF);
+    gsl_histogram_free (nz);
   }
   
   fclose(fileOut);
@@ -527,6 +594,7 @@ int readParameters(int argc, char **argv, Config *para){
   para->coordType = CART;
   para->seed      = 20091982;
   para->constDen  = 0;
+  para->nz        = 0;
   
   for(i=0;i<2;i++){
     para->minDefinied[i] = 0;
@@ -539,12 +607,13 @@ int readParameters(int argc, char **argv, Config *para){
   strcpy(para->fileOutName,"");
   strcpy(para->fileCatInName,"\0");
   strcpy(para->fileRegInName,"\0");
+  strcpy(para->fileNofZName,"\0");
   
   for(i=0;i<argc;i++){
     //Help-------------------------------------------------------------------//
     if(!strcmp(argv[i],"-h") || !strcmp(argv[i],"--help") || argc == 1){
       fprintf(stderr,"\n\n                   V E N I C E\n\n");
-      fprintf(stderr,"           mask utility program version 3.5 \n\n");
+      fprintf(stderr,"           mask utility program version 3.6 \n\n");
       fprintf(stderr,"Usage: %s -m mask.[reg,fits]               [OPTIONS] -> binary mask for visualization\n",argv[0]);
       fprintf(stderr,"    or %s -m mask.[reg,fits] -cat file.cat [OPTIONS] -> objects in/out of mask\n",argv[0]);
       fprintf(stderr,"    or %s -m mask.[reg,fits] -r            [OPTIONS] -> random catalogue\n",argv[0]);
@@ -555,6 +624,7 @@ int readParameters(int argc, char **argv, Config *para){
       fprintf(stderr,"    -coord [cart,spher]      coordinate type, default:cart\n");
       fprintf(stderr,"    -[x,y]min value          lower limit for x and y\n");
       fprintf(stderr,"    -[x,y]max value          upper limit for x and y\n");
+      fprintf(stderr,"    -nz file_nz.in           redshift distribution for random objects\n");
       fprintf(stderr,"    -seed  N                 random seed\n");
       fprintf(stderr,"    -npart N                 number of random objects\n");
       fprintf(stderr,"    -cd                      multiply npart by the mask area (for constant density)\n");
@@ -677,6 +747,15 @@ int readParameters(int argc, char **argv, Config *para){
       }
       para->maxDefinied[1] = 1;
       para->max[1] = atof(argv[i+1]); 
+    }
+     //Input catalogue (if -cat set)------------------------------------------//
+    if(!strcmp(argv[i],"-nz")){
+      if(argv[i+1] == NULL){
+	fprintf(stderr,"Missing argument after %s\nExiting...\n",argv[i]);
+	exit(-1);
+      }
+      strcpy(para->fileNofZName,argv[i+1]);
+      para->nz = 1;
     }
     //Coordinates type-----------------------------------------//
     if(!strcmp(argv[i],"-coord")) {
