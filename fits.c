@@ -5,7 +5,7 @@ void *readFits(const Config *para, int *bitpix, int *status, long naxes[2], doub
   /* Reads fits file and return info. "convert" is a pointer to a pointer of a function. */
   
   if(para->coordType != CART){
-    fprintf(stderr,"%s: fits file detected. coordType should be set to CART for image coordinates. Exiting...\n",MYNAME);
+    fprintf(stderr,"%s: fits file detected. coord should be set to cart for image coordinates. Exiting...\n",MYNAME);
     exit(EXIT_FAILURE);
   }
   fitsfile *fptr; 

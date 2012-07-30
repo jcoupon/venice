@@ -247,7 +247,7 @@ int flagCat(const Config *para){
   
   if(checkFileExt(para->fileRegInName,".fits")){
     if(para->coordType != CART){
-      fprintf(stderr,"%s: fits file detected. coordType should be set to CART for image coordinates. Exiting...\n",MYNAME);
+      fprintf(stderr,"%s: fits file detected. coord should be set to cart for image coordinates. Exiting...\n",MYNAME);
       exit(EXIT_FAILURE);
     }    
     
@@ -374,7 +374,7 @@ int randomCat(const Config *para){
   gsl_histogram_pdf *nz_PDF;
 
   if(para->nz){
-    fileNofZ = fopenAndCheck("test/nz.out","r");
+    fileNofZ = fopenAndCheck(para->fileNofZName,"r");
     
     Nbins= 0;
     while(fgets(line,NFIELD*NCHAR, fileNofZ) != NULL)
@@ -398,10 +398,10 @@ int randomCat(const Config *para){
     gsl_histogram_pdf_init (nz_PDF, nz);
   }
   
+
   if(checkFileExt(para->fileRegInName,".fits")){
-    
     if(para->coordType != CART){
-      fprintf(stderr,"%s: fits file detected. coordType should be set to CART for image coordinates. Exiting...\n",MYNAME);
+      fprintf(stderr,"%s: fits file detected. coord should be set to cart for image coordinates. Exiting...\n",MYNAME);
       exit(EXIT_FAILURE);
     }    
     
@@ -759,8 +759,10 @@ int readParameters(int argc, char **argv, Config *para){
     }
     //Coordinates type-----------------------------------------//
     if(!strcmp(argv[i],"-coord")) {
-      if(!strcmp(argv[i+1],"spher")) para->coordType = RADEC;
-      if(!strcmp(argv[i+1],"cart")) para->coordType = CART;
+      if(!strcmp(argv[i+1],"spher"))  para->coordType = RADEC;
+      if(!strcmp(argv[i+1],"cart")) {  para->coordType = CART;
+
+      }
     }
     //random seed-----------------------------------------//
     if(!strcmp(argv[i],"-seed")){
