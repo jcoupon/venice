@@ -7,12 +7,22 @@
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_histogram.h>
 #include <gsl/gsl_histogram2d.h>
+#include <gsl/gsl_integration.h>
 
 #define FAILURE 0
 #define SUCCESS 1
 
 #define PI    3.14159265358979323846
 #define TWOPI 6.283185307179586476925287
+
+/* useful constants */
+#define c     299792.458
+#define G     6.67300e-11
+
+/* WMAP5 Cosmology */
+#define H0 72 /* all values definied with h = 0.72 */
+#define Omega_M 0.258
+#define Omega_L 0.742
 
 //#define EPS 1.0e-10
 #define INF   1.0e30
@@ -27,6 +37,8 @@
 #define MIN(x,y) ((x) < (y)) ? (x) : (y)
 #define ABS(a) ((a) < 0 ? -(a) : (a))
 #define PARITY(a) (a)%2 ? ODD : EVEN
+#define SWAP(a,b) {swap = (a); (a) = (b); (b) = swap;}
+#define SQUARE(a) ((a)*(a))
 
 #define NFIELD    100
 #define NCHAR     20
@@ -36,11 +48,6 @@
 #define getIntValue(array,col)     atoi(array+NCHAR*(col-1))
 #define getCharValue(array,col)    array+NCHAR*(col-1)
 #define getLine(array,i)           array+NFIELD*NCHAR*i
-
-#define MAX(x,y) ((x) > (y)) ? (x) : (y)
-#define MIN(x,y) ((x) < (y)) ? (x) : (y)
-#define ABS(a) ((a) < 0 ? -(a) : (a))
-#define SWAP(a,b) {swap = (a); (a) = (b); (b) = swap;}
 
 /*----------------------------------------------------------------*
  *New types                                                       *
@@ -52,15 +59,17 @@ typedef struct Config
   char fileCatInName[1000];
   char fileOutName[1000];
   char fileNofZName[1000];
-  int nz;
+  int nz, zrange;
   int nx,ny,format;
   int xcol,ycol;
   int coordType, constDen;
   size_t npart,seed;
-  double min[2];
-  double max[2];
+  double min[2], max[2], zmin, zmax;
   int minDefinied[2];
   int maxDefinied[2];
+  
+  /* cosmology */
+  double a[4];
 } Config;
 
 
@@ -78,7 +87,6 @@ typedef struct Polygon
   double xmin[2];
   double xmax[2];
 } Polygon;
-
 
 typedef struct Node
 {
@@ -131,6 +139,9 @@ void cpyPolygon(Polygon *a, Polygon *b);
  *Utils - numeric                                                 *
  *----------------------------------------------------------------*/
 
+double distComo(double z, const double a[4]);
+double drdz(double x, void * params);
+double dvdz(double z, const double a[4]);
 double determineMachineEpsilon();
 size_t determineSize_tError();
 gsl_rng *randomInitialize(size_t seed);

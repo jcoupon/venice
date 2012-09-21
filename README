@@ -4,7 +4,7 @@ Jean Coupon - 2009, 2012
 
 README for venice, a mask utility program
 
-v3.6
+v3.7
 
 ------------------------
 I. INSTALLATION
@@ -41,6 +41,7 @@ Options:
     -[x,y]min value          lower limit for x and y
     -[x,y]max value          upper limit for x and y
     -nz file_nz.in           redshift distribution for random objects
+    -z zmin,zmax             redshift range for random objects (if volume limited)
     -seed  N                 random seed
     -npart N                 number of random objects
     -cd                      multiply npart by the mask area (for constant density)
@@ -188,6 +189,7 @@ Options
 	-ymin number, the minimum coordinate in the y direction.
 	-ymax number, the maximum coordinate in the y direction.
 
+
 Example
 
 How to create a new catalogue newcat.cat with a mask file named mask[.reg,.fits] 
@@ -238,9 +240,13 @@ Options
 	with no mask), you have to define all of these values.
 	-seed number (must be > 0), the seed for the GSL 
 	random generator (default: 20091982)
-        -nz file_nz.in, provides a redshift distribution for random 
-	objects (format: z n(z)). A redshift for each object is 
-	randomly drawn according to this distribution
+     	-nz file_nz, to provide a file with the redshift distribution from which
+         the random objects will be drawn. Note: if the binning is too small, this
+         will "kill" the large scale power along the line of sight direction
+        -z zmin,zmax, to have the random point number follow the volume size
+         between zmin and zmax. This garantee a constant density as function 
+         of redshift. If the data sample is volume limited, this is
+         the right option to use (instead of -nz).
 	
 IMPORTANT: "npart" is the number of DRAWN objects, then if the mask is not empty
 the number of objects "outside" will be < npart. Tip: 

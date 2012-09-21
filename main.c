@@ -2,7 +2,7 @@
 
 /*
 ------------------------
-Jean Coupon - Jul 2012
+Jean Coupon - Aug. 2012
 main.c for "venice"
 ------------------------
 
@@ -20,10 +20,12 @@ TO DO:
 
 Modifications:
 
-v 3.6 - Jul. 2012
+v 3.8 - Aug. 2012
 - a redshift distribution can now be given in a form
   of an file with histogram through the 
   option "-nz file_nz.in".
+- a redshift range can be given for volume limited 
+  samples
 v 3.5 - Feb. 2012
 - started to implement a python wrapper. 
 Contributor: Ben Granett
@@ -93,7 +95,7 @@ int main(int argc, char **argv)
   srand((unsigned int)time(NULL));
   EPS   = determineMachineEpsilon();
   IDERR = determineSize_tError();
-  Config para;  
+  Config para;
   
   /* tasks */
   switch (readParameters(argc,argv,&para)){
@@ -249,7 +251,7 @@ int flagCat(const Config *para){
     if(para->coordType != CART){
       fprintf(stderr,"%s: fits file detected. coord should be set to cart for image coordinates. Exiting...\n",MYNAME);
       exit(EXIT_FAILURE);
-    }    
+    }
     
     long fpixel[2], naxes[2];
     int bitpix, status = 0;
@@ -372,17 +374,24 @@ int randomCat(const Config *para){
   
   gsl_histogram *nz;
   gsl_histogram_pdf *nz_PDF;
+  
+  /*
+    for(i=0;i<2000;i++){
+    z = (double)i/1000.0;
+    printf("%f %f %f\n",z,dvdz(z,para->a),distComo(z,para->a)*distComo(z,para->a)*distComo(z,para->a));
+    }
+    exit(-1);
+  */
 
   if(para->nz){
     fileNofZ = fopenAndCheck(para->fileNofZName,"r");
-    
     Nbins= 0;
     while(fgets(line,NFIELD*NCHAR, fileNofZ) != NULL)
       if(getStrings(line,item," ",&Ncol))  Nbins++;
     rewind(fileNofZ);
     fprintf(stderr,"Nbins = %zd\n",Nbins);
     
-    nz = gsl_histogram_alloc(Nbins);
+    nz     = gsl_histogram_alloc(Nbins);
     nz_PDF = gsl_histogram_pdf_alloc (Nbins);
     
     i = 0;
@@ -398,6 +407,21 @@ int randomCat(const Config *para){
     gsl_histogram_pdf_init (nz_PDF, nz);
   }
   
+  if(para->zrange){
+    Nbins= 1000;
+    double delta = (para->zmax - para->zmin)/(double)Nbins;
+    
+    nz     = gsl_histogram_alloc(Nbins);
+    nz_PDF = gsl_histogram_pdf_alloc (Nbins);
+    
+    for(i=0;i<Nbins;i++){
+      nz->range[i] = para->zmin + delta*(double)i;
+      nz->bin[i]   = dvdz(nz->range[i] + delta/2.0, para->a);
+    }
+    /* gsl structure requires an upper limit for the last bin*/
+    nz->range[Nbins]   = para->zmin + delta*(double)Nbins;
+    gsl_histogram_pdf_init (nz_PDF, nz);
+  }
 
   if(checkFileExt(para->fileRegInName,".fits")){
     if(para->coordType != CART){
@@ -432,7 +456,7 @@ int randomCat(const Config *para){
       x[1] = gsl_ran_flat(r,xmin[1],xmax[1]);
       fpixel[0] = roundToNi(x[0]) - 1;
       fpixel[1] = roundToNi(x[1]) - 1;
-      if(para->nz){
+      if(para->nz || para->zrange){
 	z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
 	fprintf(fileOut,"%f %f %g %f\n", x[0], x[1], convert(table,fpixel[1]*naxes[0]+fpixel[0]), z);
       }else{
@@ -491,7 +515,7 @@ int randomCat(const Config *para){
       }
       /* 1 = outside the mask, 0 = inside the mask */     
       if(flag=0,!insidePolygonTree(polyTree,x0,x,&poly_id)) flag = 1;
-      if(para->nz){
+      if(para->nz || para->zrange){
 	z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
 	switch (para->format){
 	case 1: /* only objects outside the mask */
@@ -550,7 +574,7 @@ int randomCat(const Config *para){
 	x[1] = gsl_ran_flat(r,sin(xmin[1]*PI/180.0),sin(xmax[1]*PI/180.0));
 	x[1] = asin(x[1])*180.0/PI;
       }
-      if(para->nz){
+      if(para->nz || para->zrange){
 	z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
 	fprintf(fileOut,"%f %f %f\n", x[0], x[1], z);
       }else{
@@ -565,7 +589,7 @@ int randomCat(const Config *para){
     exit(EXIT_FAILURE);
   }
   
-  if(para->nz){
+  if(para->nz || para->zrange){
     gsl_histogram_pdf_free (nz_PDF);
     gsl_histogram_free (nz);
   }
@@ -581,8 +605,10 @@ int randomCat(const Config *para){
 
 int readParameters(int argc, char **argv, Config *para){
   int i,task,nomask;
-    
-  //default parameters
+  char list[NFIELD*NCHAR];
+  size_t Ncol;
+
+  /* Default parameters */
   nomask          = 1;
   task            = 1;
   para->nx        = 512;
@@ -595,7 +621,15 @@ int readParameters(int argc, char **argv, Config *para){
   para->seed      = 20091982;
   para->constDen  = 0;
   para->nz        = 0;
+  para->zrange    = 0;
   
+  /* default cosmology <=> WMAP5 */
+  para->a[0] = H0;
+  para->a[1] = Omega_M;
+  para->a[2] = Omega_L;
+  para->a[3] = c;
+  
+
   for(i=0;i<2;i++){
     para->minDefinied[i] = 0;
     para->maxDefinied[i] = 0;
@@ -613,7 +647,7 @@ int readParameters(int argc, char **argv, Config *para){
     //Help-------------------------------------------------------------------//
     if(!strcmp(argv[i],"-h") || !strcmp(argv[i],"--help") || argc == 1){
       fprintf(stderr,"\n\n                   V E N I C E\n\n");
-      fprintf(stderr,"           mask utility program version 3.6 \n\n");
+      fprintf(stderr,"           mask utility program version 3.8 \n\n");
       fprintf(stderr,"Usage: %s -m mask.[reg,fits]               [OPTIONS] -> binary mask for visualization\n",argv[0]);
       fprintf(stderr,"    or %s -m mask.[reg,fits] -cat file.cat [OPTIONS] -> objects in/out of mask\n",argv[0]);
       fprintf(stderr,"    or %s -m mask.[reg,fits] -r            [OPTIONS] -> random catalogue\n",argv[0]);
@@ -625,6 +659,7 @@ int readParameters(int argc, char **argv, Config *para){
       fprintf(stderr,"    -[x,y]min value          lower limit for x and y\n");
       fprintf(stderr,"    -[x,y]max value          upper limit for x and y\n");
       fprintf(stderr,"    -nz file_nz.in           redshift distribution for random objects\n");
+      fprintf(stderr,"    -z zmin,zmax             redshift range for random objects (if volume limited)\n");
       fprintf(stderr,"    -seed  N                 random seed\n");
       fprintf(stderr,"    -npart N                 number of random objects\n");
       fprintf(stderr,"    -cd                      multiply npart by the mask area (for constant density)\n");
@@ -755,13 +790,36 @@ int readParameters(int argc, char **argv, Config *para){
 	exit(-1);
       }
       strcpy(para->fileNofZName,argv[i+1]);
+      if(para->zrange == 1){
+	fprintf(stderr,"Please choose between nz (n(z) file) and z (redshift range, volume limited case)\n");
+	exit(-1);
+      }
       para->nz = 1;
+    }
+    if(!strcmp(argv[i],"-z")){
+      if(argv[i+1] == NULL){
+	fprintf(stderr,"Missing argument after %s\nExiting...\n",argv[i]);
+	exit(-1);
+      }
+      getStrings(argv[i+1],list,",",&Ncol);
+      para->zmin = getDoubleValue(list,1);
+      para->zmax = getDoubleValue(list,2);
+      if(para->zmax < para->zmin){
+	fprintf(stderr,"zmin must be lower than zmax...Exiting...\n");
+	exit(-1);
+      }
+      if(para->nz == 1){
+	fprintf(stderr,"Please choose between nz (n(z) file) and z (redshift range, volume limited case)\n");
+	exit(-1);
+      }
+      para->zrange = 1;
     }
     //Coordinates type-----------------------------------------//
     if(!strcmp(argv[i],"-coord")) {
-      if(!strcmp(argv[i+1],"spher"))  para->coordType = RADEC;
-      if(!strcmp(argv[i+1],"cart")) {  para->coordType = CART;
-
+      if(!strcmp(argv[i+1],"spher")){ 
+	para->coordType = RADEC;
+      }else if(!strcmp(argv[i+1],"cart")) {  
+	para->coordType = CART;
       }
     }
     //random seed-----------------------------------------//
@@ -1101,6 +1159,41 @@ void cpyPolygon(Polygon *a, Polygon *b){
 /*----------------------------------------------------------------*
  *Utils - numeric                                                 *
  *----------------------------------------------------------------*/
+
+double distComo(double z, const double a[4]){
+  /* Return the comoving distance of z, given the cosmological 
+   * parameters a. */
+  
+  int n = 1000;
+  gsl_integration_workspace *w = gsl_integration_workspace_alloc (n);
+  
+  gsl_function F;
+  F.function = &drdz;
+  F.params   = (void *)a;
+
+  double result, error;
+  gsl_integration_qag(&F, 0.0, z, 0, 1e-7, n, 6, w, &result, &error); 
+  gsl_integration_workspace_free (w);
+  
+  return result;
+}
+
+double drdz(double x, void * params){
+  /* Inverse of E(z). With following cosmological parameters:
+   * a[0] = H0;
+   * a[1] = Omega_M;
+   * a[2] = Omega_L;
+   * a[3] = c;
+   */
+  
+  double *a = (double *) params;
+  return a[3]/(a[0]*sqrt(a[1]*pow(1+x,3.0)+a[2]));
+}
+
+double dvdz(double z, const double a[4]){
+  /* Differential comoving volume per unit solid angle */
+  return SQUARE(distComo(z, a))*a[3]/(a[0]*sqrt(a[1]*pow(1+z,3.0)+a[2]));
+}
 
 gsl_rng *randomInitialize(size_t seed){
   /*Random number generator.
