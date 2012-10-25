@@ -142,6 +142,7 @@ void cpyPolygon(Polygon *a, Polygon *b);
 double distComo(double z, const double a[4]);
 double drdz(double x, void * params);
 double dvdz(double z, const double a[4]);
+double distAngSpher(const double RA1, double DEC1, double RA2, double DEC2);
 double determineMachineEpsilon();
 size_t determineSize_tError();
 gsl_rng *randomInitialize(size_t seed);

@@ -19,7 +19,9 @@ TO DO:
 - adapt to be used with python
 
 Modifications:
-
+v 3.8.1 Oct 2012
+- now reads ellipses, circle and box
+- can read from the stdin with -cat -
 v 3.8 - Aug. 2012
 - a redshift distribution can now be given in a form
   of an file with histogram through the 
@@ -233,7 +235,7 @@ int flagCat(const Config *para){
     For fits format, it writes the pixel value.
   */
   
-  int Npolys,poly_id,flag;
+  int Npolys, poly_id, flag, verbose = 1;
   size_t i,N, Ncol;
   double x[2], x0[2], xmin[2], xmax[2];
   char line[NFIELD*NCHAR], item[NFIELD*NCHAR],*str_end;
@@ -242,10 +244,14 @@ int flagCat(const Config *para){
   FILE *fileCatIn = fopenAndCheck(para->fileCatInName,"r");
 
   N = 0;
-  while(fgets(line,NFIELD*NCHAR,fileCatIn) != NULL)
-    if(getStrings(line,item," ",&Ncol))  N++;
-  rewind(fileCatIn);
-  fprintf(stderr,"Nobjects = %zd\n",N);
+  if(fileCatIn != stdin){
+    while(fgets(line,NFIELD*NCHAR,fileCatIn) != NULL)
+      if(getStrings(line,item," ",&Ncol))  N++;
+    rewind(fileCatIn);
+    fprintf(stderr,"Nobjects = %zd\n", N);
+  }else{
+    verbose = 0;
+  }
   
   if(checkFileExt(para->fileRegInName,".fits")){
     if(para->coordType != CART){
@@ -274,7 +280,7 @@ int flagCat(const Config *para){
     
     /* ATTENTION "convert" converts everything into double */
     i = 0;
-    fprintf(stderr,"\nProgress =     ");
+    if(verbose) fprintf(stderr,"\nProgress =     ");
     while(fgets(line,NFIELD*NCHAR,fileCatIn) != NULL){
 	if(getStrings(line,item," ",&Ncol)){
 	  i++;
@@ -292,7 +298,7 @@ int flagCat(const Config *para){
 	  }
 	}
     }
-    fprintf(stderr,"\b\b\b\b100%%\n");
+    if(verbose) fprintf(stderr,"\b\b\b\b100%%\n");
 
     free(table);
     
@@ -316,7 +322,7 @@ int flagCat(const Config *para){
     x0[0] = xmin[0] - 1.0; x0[1] = xmin[1] - 1.0;
     
     i = 0;
-    fprintf(stderr,"Progress =     ");
+    if(verbose) fprintf(stderr,"Progress =     ");
     while(fgets(line,NFIELD*NCHAR,fileCatIn) != NULL){
       if(getStrings(line,item," ",&Ncol)){
 	i++;
@@ -341,7 +347,7 @@ int flagCat(const Config *para){
       }
     }
     fflush(stdout);
-    fprintf(stderr,"\b\b\b\b100%%\n");
+    if(verbose) fprintf(stderr,"\b\b\b\b100%%\n");
   }else{
     fprintf(stderr,"%s: mask file format not recognized. Please provide .reg, .fits or no mask with input limits. Exiting...\n",MYNAME);
     exit(EXIT_FAILURE);
@@ -375,7 +381,7 @@ int randomCat(const Config *para){
   gsl_histogram *nz;
   gsl_histogram_pdf *nz_PDF;
   
-  /*
+  /* DEBUGGING
     for(i=0;i<2000;i++){
     z = (double)i/1000.0;
     printf("%f %f %f\n",z,dvdz(z,para->a),distComo(z,para->a)*distComo(z,para->a)*distComo(z,para->a));
@@ -647,10 +653,11 @@ int readParameters(int argc, char **argv, Config *para){
     //Help-------------------------------------------------------------------//
     if(!strcmp(argv[i],"-h") || !strcmp(argv[i],"--help") || argc == 1){
       fprintf(stderr,"\n\n                   V E N I C E\n\n");
-      fprintf(stderr,"           mask utility program version 3.8 \n\n");
+      fprintf(stderr,"           mask utility program version 3.8.1 \n\n");
       fprintf(stderr,"Usage: %s -m mask.[reg,fits]               [OPTIONS] -> binary mask for visualization\n",argv[0]);
       fprintf(stderr,"    or %s -m mask.[reg,fits] -cat file.cat [OPTIONS] -> objects in/out of mask\n",argv[0]);
-      fprintf(stderr,"    or %s -m mask.[reg,fits] -r            [OPTIONS] -> random catalogue\n",argv[0]);
+      fprintf(stderr,"    or %s -m mask.[reg,fits] -cat -        [OPTIONS] -> objects in/out of mask (from stdin)\n",argv[0]);
+      fprintf(stderr,"    or %s -m mask.[reg,fits] -r            [OPTIONS] -> random catalogue\n\n",argv[0]);
       fprintf(stderr,"Options:\n");
       fprintf(stderr,"    -o FILE                  output file name, default:stdout\n");
       fprintf(stderr,"    -f [outside,inside,all]  output format, default:outside\n");
@@ -663,7 +670,8 @@ int readParameters(int argc, char **argv, Config *para){
       fprintf(stderr,"    -seed  N                 random seed\n");
       fprintf(stderr,"    -npart N                 number of random objects\n");
       fprintf(stderr,"    -cd                      multiply npart by the mask area (for constant density)\n");
-      fprintf(stderr,"    -h, --help               this message\n");
+      fprintf(stderr,"    -h, --help               this message\n\n");
+      fprintf(stderr,"For .reg files, the region must be polygon, circle, ellipse or box.\n");
       fprintf(stderr,"Notice: 0 means inside the mask, 1 outside. For fits file,\n");
       fprintf(stderr,"the pixel value is added at the end of the line\n");
       exit(EXIT_FAILURE);
@@ -963,15 +971,18 @@ Polygon *readPolygonFile(FILE *fileIn, int *Npolys, Node *polyTree){
 }
 
 Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
-  /*Reads the file file_in and returns the polygons tree.*/
+  /* Reads the file file_in and returns the polygons tree.
+   * See http://hea-www.harvard.edu/RD/ds9/ref/region.html
+   */
   char line[NFIELD*NCHAR], item[NFIELD*NCHAR],*str_begin,*str_end;
-  int i,j;
+  int i,j, spherical;
   size_t N, NpolysAll;
+  double x, y, r, R, h, w, alpha, angle, r_RA;
   
   NpolysAll = 0;
   //Read the entire file and count the total number of polygons, NpolysAll.
   while(fgets(line,NFIELD*NCHAR,fileIn) != NULL)
-    if(strstr(line,"polygon") != NULL) NpolysAll += 1;
+    if(strstr(line,"polygon") != NULL || strstr(line,"circle") != NULL || strstr(line,"ellipse") != NULL || strstr(line,"box") != NULL) NpolysAll += 1;
   rewind(fileIn);
   Polygon *polysAll = malloc(NpolysAll*sizeof(Polygon));
   
@@ -984,33 +995,152 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
       strcpy(str_end,"\n\0");
       strcpy(line,str_begin);
       getStrings(line,item,",",&N);
-      //------------------------------//
-      //get all coordinates separated by comas.
+      /* ------------------------------------- *
+       * get all coordinates separated by comas.
+       */
       polysAll[i].N = N/2;
       if(N/2 > NVERTICES){
 	fprintf(stderr,"%s: %zd = too many points for polygon %d (%d maxi). Exiting...\n",MYNAME,N/2,i,NVERTICES);
 	exit(EXIT_FAILURE);
-      }      
+      }
       polysAll[i].id      = i;
       polysAll[i].xmin[0] = atof(item);
       polysAll[i].xmax[0] = atof(item);
       polysAll[i].xmin[1] = atof(item+NCHAR);
       polysAll[i].xmax[1] = atof(item+NCHAR);
       for(j=0;j<N/2;j++){
-	polysAll[i].x[j] = atof(item+NCHAR*2*j);
-	polysAll[i].y[j] = atof(item+NCHAR*(2*j+1));
+	polysAll[i].x[j]    = atof(item+NCHAR*2*j);
+	polysAll[i].y[j]    = atof(item+NCHAR*(2*j+1));
 	polysAll[i].xmin[0] = MIN(polysAll[i].xmin[0], polysAll[i].x[j]);
 	polysAll[i].xmax[0] = MAX(polysAll[i].xmax[0], polysAll[i].x[j]);
 	polysAll[i].xmin[1] = MIN(polysAll[i].xmin[1], polysAll[i].y[j]);
 	polysAll[i].xmax[1] = MAX(polysAll[i].xmax[1], polysAll[i].y[j]);
       }
       i++;
-      //------------------------------//
+      /* ------------------------------------- */
+    }else if(strstr(line,"circle") != NULL){
+      str_begin = strstr(line,"(")+sizeof(char);
+      str_end = strstr(line,")");
+      strcpy(str_end,"\n\0");
+      strcpy(line,str_begin);
+      getStrings(line,item,",",&N);
+      
+      spherical = 0;
+      if(strstr(item+NCHAR*2,"\"") != NULL) spherical = 1;
+      
+      polysAll[i].N = 40;
+      x             =  atof(item+NCHAR*0);
+      y             =  atof(item+NCHAR*1);
+      r             =  atof(item+NCHAR*2);
+
+      
+      polysAll[i].id      = i;
+      polysAll[i].xmin[0] = x;
+      polysAll[i].xmax[0] = x;
+      polysAll[i].xmin[1] = y;
+      polysAll[i].xmax[1] = y;
+      for(j=0;j<polysAll[i].N;j++){
+      	alpha            = TWOPI*(double)j/((double)polysAll[i].N);
+	polysAll[i].y[j] = r*sin(alpha)+y;
+	if(spherical){
+	  double num   = SQUARE(sin(r*PI/180.0/2.0)) - SQUARE(sin(r*sin(alpha)*PI/180.0/2.0));
+	  double denom = cos(y*PI/180.0)*cos(polysAll[i].y[j]*PI/180.0);
+	  if(PI/2.0 < alpha && alpha < 3.0*PI/2.0){ 
+	    polysAll[i].x[j] = - 2.0*asin(sqrt(num/denom))*180.0/PI + x;
+	  }else{
+	    polysAll[i].x[j] = + 2.0*asin(sqrt(num/denom))*180.0/PI + x;
+	  }
+	}else{
+	  polysAll[i].x[j]    = r*cos(alpha)+x;
+	}
+	
+	/* DEBUGGING */
+	   fprintf(stderr,"%f %f %f\n",r, distAngSpher(x, y, polysAll[i].x[j], polysAll[i].y[j]), polysAll[i].x[j]-x );
+	
+
+	polysAll[i].xmin[0] = MIN(polysAll[i].xmin[0], polysAll[i].x[j]);
+      	polysAll[i].xmax[0] = MAX(polysAll[i].xmax[0], polysAll[i].x[j]);
+      	polysAll[i].xmin[1] = MIN(polysAll[i].xmin[1], polysAll[i].y[j]);
+      	polysAll[i].xmax[1] = MAX(polysAll[i].xmax[1], polysAll[i].y[j]);
+      }
+      i++;
+      /* ------------------------------------- */
+    }else if(strstr(line,"ellipse") != NULL){
+      str_begin = strstr(line,"(")+sizeof(char);
+      str_end = strstr(line,")");
+      strcpy(str_end,"\n\0");
+      strcpy(line,str_begin);
+      getStrings(line,item,",",&N);
+      
+      polysAll[i].N = 40;
+      x =  atof(item+NCHAR*0);
+      y =  atof(item+NCHAR*1);
+      /* in arcsec. It seems to ignore " character. Good.*/
+      r     =  atof(item+NCHAR*2)/3600.0;
+      R     =  atof(item+NCHAR*3)/3600.0;
+      angle =  atof(item+NCHAR*4)*PI/180.0;
+      
+      polysAll[i].id      = i;
+      polysAll[i].xmin[0] = x;
+      polysAll[i].xmax[0] = x;
+      polysAll[i].xmin[1] = y;
+      polysAll[i].xmax[1] = y;
+      for(j=0;j<polysAll[i].N;j++){
+      	alpha = TWOPI*(double)j/((double)polysAll[i].N);
+      	polysAll[i].x[j]    =  r*cos(alpha)*cos(angle) + R*sin(alpha)*sin(angle)+x;
+      	polysAll[i].y[j]    = -r*cos(alpha)*sin(angle) + R*sin(alpha)*cos(angle)+y;
+      	polysAll[i].xmin[0] = MIN(polysAll[i].xmin[0], polysAll[i].x[j]);
+      	polysAll[i].xmax[0] = MAX(polysAll[i].xmax[0], polysAll[i].x[j]);
+      	polysAll[i].xmin[1] = MIN(polysAll[i].xmin[1], polysAll[i].y[j]);
+      	polysAll[i].xmax[1] = MAX(polysAll[i].xmax[1], polysAll[i].y[j]);
+      }
+      i++;
+      /* ------------------------------------- */
+    }else if(strstr(line,"box") != NULL){
+      str_begin = strstr(line,"(")+sizeof(char);
+      str_end = strstr(line,")");
+      strcpy(str_end,"\n\0");
+      strcpy(line,str_begin);
+      getStrings(line,item,",",&N);
+      
+      polysAll[i].N = 4;
+      x =  atof(item+NCHAR*0);
+      y =  atof(item+NCHAR*1);
+      /* in arcsec. It seems to ignore " charachter. Good.*/
+      w     =  atof(item+NCHAR*2)/3600.0;
+      h     =  atof(item+NCHAR*3)/3600.0;
+      angle =  atof(item+NCHAR*4)*PI/180.0;
+      
+      polysAll[i].x[0] = +w/2.0*cos(angle) + h/2.0*sin(angle)+x;
+      polysAll[i].y[0] = -w/2.0*sin(angle) + h/2.0*cos(angle)+y;
+      polysAll[i].x[1] = -w/2.0*cos(angle) + h/2.0*sin(angle)+x;	
+      polysAll[i].y[1] = +w/2.0*sin(angle) + h/2.0*cos(angle)+y;
+      polysAll[i].x[2] = -w/2.0*cos(angle) - h/2.0*sin(angle)+x;	
+      polysAll[i].y[2] = +w/2.0*sin(angle) - h/2.0*cos(angle)+y;
+      polysAll[i].x[3] = +w/2.0*cos(angle) - h/2.0*sin(angle)+x;
+      polysAll[i].y[3] = -w/2.0*sin(angle) - h/2.0*cos(angle)+y;
+      
+      polysAll[i].id      = i;
+      polysAll[i].xmin[0] = x;
+      polysAll[i].xmax[0] = x;
+      polysAll[i].xmin[1] = y;
+      polysAll[i].xmax[1] = y;
+      for(j=0;j<polysAll[i].N;j++){
+	polysAll[i].xmin[0] = MIN(polysAll[i].xmin[0], polysAll[i].x[j]);
+      	polysAll[i].xmax[0] = MAX(polysAll[i].xmax[0], polysAll[i].x[j]);
+      	polysAll[i].xmin[1] = MIN(polysAll[i].xmin[1], polysAll[i].y[j]);
+      	polysAll[i].xmax[1] = MAX(polysAll[i].xmax[1], polysAll[i].y[j]);
+      }
+      i++;
+      /* ------------------------------------- */
     }
+
   }
   if(i==0){
     fprintf(stderr,"%s: 0 polygon found, check input file. Exiting...\n",MYNAME);
     exit(EXIT_FAILURE);
+  }else{
+    fprintf(stderr,"%d polygon(s) found\n",i);
   }
   
   double minArea;
@@ -1195,6 +1325,18 @@ double dvdz(double z, const double a[4]){
   return SQUARE(distComo(z, a))*a[3]/(a[0]*sqrt(a[1]*pow(1+z,3.0)+a[2]));
 }
 
+
+double distAngSpher(const double RA1, double DEC1, double RA2, double DEC2){
+  /*Returns the angular distance between points with RA,DEC (in degree) 
+   */
+  
+  double sin2_ra  = 0.5*(1.0 - cos(RA1*PI/180.0)*cos(RA2*PI/180.0)  - sin(RA1*PI/180.0)*sin(RA2*PI/180.0));
+  double sin2_dec = 0.5*(1.0 - cos(DEC1*PI/180.0)*cos(DEC2*PI/180.0)- sin(DEC1*PI/180.0)*sin(DEC2*PI/180.0));
+  
+  return 2.0*asin(sqrt(MAX(EPS/100.0, sin2_dec + cos(DEC1*PI/180.0)*cos(DEC2*PI/180.0)*sin2_ra)))*180.0/PI;
+  
+}
+
 gsl_rng *randomInitialize(size_t seed){
   /*Random number generator.
     Define here which type of random generator you want*/
@@ -1236,6 +1378,9 @@ FILE *fopenAndCheck(const char *fileName,char *mode){
   if(!(strcmp(mode,"w")) && !(strcmp(fileName,""))){
     return stdout;
   }
+  if(!(strcmp(mode,"r")) && !(strcmp(fileName,"-"))){
+    return stdin;
+  } 
   
   FILE *fileTmp = fopen(fileName,mode);
   
@@ -1288,9 +1433,10 @@ void printCount(const size_t *count, const size_t *total, const size_t step){
 
 int checkFileExt(const char *s1, const char *s2){
   /*Checks if s2 matches s1 extension*/
-  size_t ext = strlen(s1) - strlen(s2);
   
-  if(strcmp(s1+ext,s2) == 0){
+  int ext = strlen(s1) - strlen(s2);
+  
+  if(strcmp(s1+ext, s2) == 0){
     return 1;
   }else{
     return 0;

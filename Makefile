@@ -2,16 +2,17 @@
 #Makefile for venice                             #	
 #------------------------------------------------#
 
-CC             = icc
+CC             = icc -use-asm
 FITS           = yes
 SRC            = main.c
 LDFLAGS        = -L$(HOME)/local/lib -lgsl -lgslcblas -lm
+#LDFLAGS        = -L/sw64/lib/ -lgsl -lgslcblas -lm
 CFLAGS_PYTHON  = -I/usr/include/python2.6
 LDFLAGS_PYTHON = -ldl -lpython2.6
 
 ifeq ($(FITS),yes)
-   LDFLAGS += -lcfitsio
-   SRC     += fits.c
+    LDFLAGS += -lcfitsio
+    SRC     += fits.c
 else
    SRC     += withoutFits.c
 endif
