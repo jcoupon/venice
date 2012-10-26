@@ -1029,9 +1029,9 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
       if(strstr(item+NCHAR*2,"\"") != NULL) spherical = 1;
       
       polysAll[i].N = 40;
-      x             =  atof(item+NCHAR*0);
-      y             =  atof(item+NCHAR*1);
-      r             =  atof(item+NCHAR*2);
+      x =  atof(item+NCHAR*0);
+      y =  atof(item+NCHAR*1);
+      r =  atof(item+NCHAR*2)/3600;
 
       
       polysAll[i].id      = i;
@@ -1042,6 +1042,7 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
       for(j=0;j<polysAll[i].N;j++){
       	alpha            = TWOPI*(double)j/((double)polysAll[i].N);
 	polysAll[i].y[j] = r*sin(alpha)+y;
+	
 	if(spherical){
 	  double num   = SQUARE(sin(r*PI/180.0/2.0)) - SQUARE(sin(r*sin(alpha)*PI/180.0/2.0));
 	  double denom = cos(y*PI/180.0)*cos(polysAll[i].y[j]*PI/180.0);
@@ -1053,11 +1054,11 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
 	}else{
 	  polysAll[i].x[j]    = r*cos(alpha)+x;
 	}
-	
-	/* DEBUGGING */
-	   fprintf(stderr,"%f %f %f\n",r, distAngSpher(x, y, polysAll[i].x[j], polysAll[i].y[j]), polysAll[i].x[j]-x );
-	
 
+	/* DEBUGGING 
+	   fprintf(stderr,"%f %f %f\n",r, distAngSpher(x, y, polysAll[i].x[j], polysAll[i].y[j]), polysAll[i].x[j]-x );
+	*/
+	
 	polysAll[i].xmin[0] = MIN(polysAll[i].xmin[0], polysAll[i].x[j]);
       	polysAll[i].xmax[0] = MAX(polysAll[i].xmax[0], polysAll[i].x[j]);
       	polysAll[i].xmin[1] = MIN(polysAll[i].xmin[1], polysAll[i].y[j]);
@@ -1071,7 +1072,10 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
       strcpy(str_end,"\n\0");
       strcpy(line,str_begin);
       getStrings(line,item,",",&N);
-      
+
+      spherical = 0;
+      if(strstr(item+NCHAR*2,"\"") != NULL) spherical = 1;
+        
       polysAll[i].N = 40;
       x =  atof(item+NCHAR*0);
       y =  atof(item+NCHAR*1);
@@ -1087,9 +1091,32 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
       polysAll[i].xmax[1] = y;
       for(j=0;j<polysAll[i].N;j++){
       	alpha = TWOPI*(double)j/((double)polysAll[i].N);
-      	polysAll[i].x[j]    =  r*cos(alpha)*cos(angle) + R*sin(alpha)*sin(angle)+x;
-      	polysAll[i].y[j]    = -r*cos(alpha)*sin(angle) + R*sin(alpha)*cos(angle)+y;
-      	polysAll[i].xmin[0] = MIN(polysAll[i].xmin[0], polysAll[i].x[j]);
+      	
+	double X, Y;
+
+	Y = R*sin(alpha);
+	if(spherical){
+	  double num   = SQUARE(sin(R*PI/180.0/2.0)) - SQUARE(sin(R*sin(alpha)*PI/180.0/2.0));
+	  double denom = cos(y*PI/180.0)*cos(polysAll[i].y[j]*PI/180.0);
+	  if(PI/2.0 < alpha && alpha < 3.0*PI/2.0){ 
+	    X = - r/R*2.0*asin(sqrt(num/denom))*180.0/PI;
+	  }else{
+	    X = + r/R*2.0*asin(sqrt(num/denom))*180.0/PI;
+	  }
+	}else{
+	  X    = r*cos(alpha);
+	}
+
+	// Rotation
+	polysAll[i].x[j]    =  X*cos(angle) + Y*sin(angle)+x;
+      	polysAll[i].y[j]    = -X*sin(angle) + Y*cos(angle)+y;
+
+	double d = distAngSpher(x, y, polysAll[i].x[j], polysAll[i].y[j]);
+	double Delta_DEC = R*sin(angle);
+
+	//	double Delta_RA = 
+
+  	polysAll[i].xmin[0] = MIN(polysAll[i].xmin[0], polysAll[i].x[j]);
       	polysAll[i].xmax[0] = MAX(polysAll[i].xmax[0], polysAll[i].x[j]);
       	polysAll[i].xmin[1] = MIN(polysAll[i].xmin[1], polysAll[i].y[j]);
       	polysAll[i].xmax[1] = MAX(polysAll[i].xmax[1], polysAll[i].y[j]);
@@ -1113,7 +1140,7 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
       
       polysAll[i].x[0] = +w/2.0*cos(angle) + h/2.0*sin(angle)+x;
       polysAll[i].y[0] = -w/2.0*sin(angle) + h/2.0*cos(angle)+y;
-      polysAll[i].x[1] = -w/2.0*cos(angle) + h/2.0*sin(angle)+x;	
+      polysAll[i].x[1] = -w/2.0*cos(angle) + h/2.0*sin(angle)+x;
       polysAll[i].y[1] = +w/2.0*sin(angle) + h/2.0*cos(angle)+y;
       polysAll[i].x[2] = -w/2.0*cos(angle) - h/2.0*sin(angle)+x;	
       polysAll[i].y[2] = +w/2.0*sin(angle) - h/2.0*cos(angle)+y;
