@@ -19,6 +19,8 @@ TO DO:
 - adapt to be used with python
 
 Modifications:
+v 3.8.2 Oct 2012
+- correction at high declination (Thanks Ben!)
 v 3.8.1 Oct 2012
 - now reads ellipses, circle and box
 - can read from the stdin with -cat -
@@ -653,7 +655,7 @@ int readParameters(int argc, char **argv, Config *para){
     //Help-------------------------------------------------------------------//
     if(!strcmp(argv[i],"-h") || !strcmp(argv[i],"--help") || argc == 1){
       fprintf(stderr,"\n\n                   V E N I C E\n\n");
-      fprintf(stderr,"           mask utility program version 3.8.1 \n\n");
+      fprintf(stderr,"           mask utility program version 3.8.2 \n\n");
       fprintf(stderr,"Usage: %s -m mask.[reg,fits]               [OPTIONS] -> binary mask for visualization\n",argv[0]);
       fprintf(stderr,"    or %s -m mask.[reg,fits] -cat file.cat [OPTIONS] -> objects in/out of mask\n",argv[0]);
       fprintf(stderr,"    or %s -m mask.[reg,fits] -cat -        [OPTIONS] -> objects in/out of mask (from stdin)\n",argv[0]);
@@ -671,8 +673,8 @@ int readParameters(int argc, char **argv, Config *para){
       fprintf(stderr,"    -npart N                 number of random objects\n");
       fprintf(stderr,"    -cd                      multiply npart by the mask area (for constant density)\n");
       fprintf(stderr,"    -h, --help               this message\n\n");
-      fprintf(stderr,"For .reg files, the region must be polygon, circle, ellipse or box.\n");
-      fprintf(stderr,"Notice: 0 means inside the mask, 1 outside. For fits file,\n");
+      fprintf(stderr,"For .reg files, the region must be \"polygon\", \"circle\", \"ellipse\" or \"box\".\n");
+      fprintf(stderr,"Notice: 0 means inside the mask, 1 outside; for .fits files,\n");
       fprintf(stderr,"the pixel value is added at the end of the line\n");
       exit(EXIT_FAILURE);
     }
@@ -977,7 +979,7 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
   char line[NFIELD*NCHAR], item[NFIELD*NCHAR],*str_begin,*str_end;
   int i,j, spherical;
   size_t N, NpolysAll;
-  double x, y, r, R, h, w, alpha, angle, r_RA;
+  double x0, y0, x, y, r, rx, ry, alpha, angle;
   
   NpolysAll = 0;
   //Read the entire file and count the total number of polygons, NpolysAll.
@@ -1016,6 +1018,9 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
 	polysAll[i].xmin[1] = MIN(polysAll[i].xmin[1], polysAll[i].y[j]);
 	polysAll[i].xmax[1] = MAX(polysAll[i].xmax[1], polysAll[i].y[j]);
       }
+
+      //fprintf(stderr,"%f %f %f %f\n", polysAll[i].xmin[0], polysAll[i].xmax[0],polysAll[i].xmin[0], polysAll[i].xmax[0]);
+
       i++;
       /* ------------------------------------- */
     }else if(strstr(line,"circle") != NULL){
@@ -1025,38 +1030,34 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
       strcpy(line,str_begin);
       getStrings(line,item,",",&N);
       
-      spherical = 0;
-      if(strstr(item+NCHAR*2,"\"") != NULL) spherical = 1;
-      
       polysAll[i].N = 40;
-      x =  atof(item+NCHAR*0);
-      y =  atof(item+NCHAR*1);
-      r =  atof(item+NCHAR*2)/3600;
-
+      x0 = atof(item+NCHAR*0);
+      y0 = atof(item+NCHAR*1);
+      
+      if(strstr(item+NCHAR*2,"\"") != NULL){
+	spherical = 1;
+	r  =  atof(item+NCHAR*2)/3600;
+      }else{
+	spherical = 0;
+	r  =  atof(item+NCHAR*2);
+      }
       
       polysAll[i].id      = i;
-      polysAll[i].xmin[0] = x;
-      polysAll[i].xmax[0] = x;
-      polysAll[i].xmin[1] = y;
-      polysAll[i].xmax[1] = y;
+      polysAll[i].xmin[0] = x0;
+      polysAll[i].xmax[0] = x0;
+      polysAll[i].xmin[1] = y0;
+      polysAll[i].xmax[1] = y0;
       for(j=0;j<polysAll[i].N;j++){
       	alpha            = TWOPI*(double)j/((double)polysAll[i].N);
-	polysAll[i].y[j] = r*sin(alpha)+y;
+	polysAll[i].x[j] = r*cos(alpha) + x0;
+	polysAll[i].y[j] = r*sin(alpha) + y0;
 	
 	if(spherical){
-	  double num   = SQUARE(sin(r*PI/180.0/2.0)) - SQUARE(sin(r*sin(alpha)*PI/180.0/2.0));
-	  double denom = cos(y*PI/180.0)*cos(polysAll[i].y[j]*PI/180.0);
-	  if(PI/2.0 < alpha && alpha < 3.0*PI/2.0){ 
-	    polysAll[i].x[j] = - 2.0*asin(sqrt(num/denom))*180.0/PI + x;
-	  }else{
-	    polysAll[i].x[j] = + 2.0*asin(sqrt(num/denom))*180.0/PI + x;
-	  }
-	}else{
-	  polysAll[i].x[j]    = r*cos(alpha)+x;
+	  polysAll[i].x[j] = 2.0*asin(sin((polysAll[i].x[j]-x0)*PI/180/2.0)/cos(polysAll[i].y[j]*PI/180))*180.0/PI+x0;
 	}
-
+	
 	/* DEBUGGING 
-	   fprintf(stderr,"%f %f %f\n",r, distAngSpher(x, y, polysAll[i].x[j], polysAll[i].y[j]), polysAll[i].x[j]-x );
+	fprintf(stderr,"%f %f\n",r, distAngSpher(x0, y0, polysAll[i].x[j], polysAll[i].y[j]));
 	*/
 	
 	polysAll[i].xmin[0] = MIN(polysAll[i].xmin[0], polysAll[i].x[j]);
@@ -1073,55 +1074,43 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
       strcpy(line,str_begin);
       getStrings(line,item,",",&N);
 
-      spherical = 0;
-      if(strstr(item+NCHAR*2,"\"") != NULL) spherical = 1;
-        
       polysAll[i].N = 40;
-      x =  atof(item+NCHAR*0);
-      y =  atof(item+NCHAR*1);
-      /* in arcsec. It seems to ignore " character. Good.*/
-      r     =  atof(item+NCHAR*2)/3600.0;
-      R     =  atof(item+NCHAR*3)/3600.0;
-      angle =  atof(item+NCHAR*4)*PI/180.0;
+      x0 = atof(item+NCHAR*0);
+      y0 = atof(item+NCHAR*1);
+      if(strstr(item+NCHAR*2,"\"") != NULL){
+	spherical = 1;
+	rx  =  atof(item+NCHAR*2)/3600;
+	ry  =  atof(item+NCHAR*3)/3600;
+      }else{
+	spherical = 0;
+	rx  =  atof(item+NCHAR*2);
+	ry  =  atof(item+NCHAR*3);
+      }
+      angle = atof(item+NCHAR*4)*PI/180.0;
       
       polysAll[i].id      = i;
-      polysAll[i].xmin[0] = x;
-      polysAll[i].xmax[0] = x;
-      polysAll[i].xmin[1] = y;
-      polysAll[i].xmax[1] = y;
+      polysAll[i].xmin[0] = x0;
+      polysAll[i].xmax[0] = x0;
+      polysAll[i].xmin[1] = y0;
+      polysAll[i].xmax[1] = y0;
       for(j=0;j<polysAll[i].N;j++){
-      	alpha = TWOPI*(double)j/((double)polysAll[i].N);
-      	
-	double X, Y;
-
-	Y = R*sin(alpha);
+      	alpha            = TWOPI*(double)j/((double)polysAll[i].N);
+	x = rx*cos(alpha) + x0;
+	y = ry*sin(alpha) + y0;
+	
 	if(spherical){
-	  double num   = SQUARE(sin(R*PI/180.0/2.0)) - SQUARE(sin(R*sin(alpha)*PI/180.0/2.0));
-	  double denom = cos(y*PI/180.0)*cos(polysAll[i].y[j]*PI/180.0);
-	  if(PI/2.0 < alpha && alpha < 3.0*PI/2.0){ 
-	    X = - r/R*2.0*asin(sqrt(num/denom))*180.0/PI;
-	  }else{
-	    X = + r/R*2.0*asin(sqrt(num/denom))*180.0/PI;
-	  }
-	}else{
-	  X    = r*cos(alpha);
+	  x = 2.0*asin(sin((x-x0)*PI/180/2.0)/cos(y*PI/180))*180.0/PI+x0;
 	}
-
-	// Rotation
-	polysAll[i].x[j]    =  X*cos(angle) + Y*sin(angle)+x;
-      	polysAll[i].y[j]    = -X*sin(angle) + Y*cos(angle)+y;
-
-	double d = distAngSpher(x, y, polysAll[i].x[j], polysAll[i].y[j]);
-	double Delta_DEC = R*sin(angle);
-
-	//	double Delta_RA = 
-
-  	polysAll[i].xmin[0] = MIN(polysAll[i].xmin[0], polysAll[i].x[j]);
+	
+	rotate(x0, y0, x, y, &(polysAll[i].x[j]), &(polysAll[i].y[j]), angle, spherical);
+	
+	polysAll[i].xmin[0] = MIN(polysAll[i].xmin[0], polysAll[i].x[j]);
       	polysAll[i].xmax[0] = MAX(polysAll[i].xmax[0], polysAll[i].x[j]);
       	polysAll[i].xmin[1] = MIN(polysAll[i].xmin[1], polysAll[i].y[j]);
       	polysAll[i].xmax[1] = MAX(polysAll[i].xmax[1], polysAll[i].y[j]);
       }
       i++;
+      
       /* ------------------------------------- */
     }else if(strstr(line,"box") != NULL){
       str_begin = strstr(line,"(")+sizeof(char);
@@ -1131,37 +1120,40 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
       getStrings(line,item,",",&N);
       
       polysAll[i].N = 4;
-      x =  atof(item+NCHAR*0);
-      y =  atof(item+NCHAR*1);
-      /* in arcsec. It seems to ignore " charachter. Good.*/
-      w     =  atof(item+NCHAR*2)/3600.0;
-      h     =  atof(item+NCHAR*3)/3600.0;
-      angle =  atof(item+NCHAR*4)*PI/180.0;
+      x0 = atof(item+NCHAR*0);
+      y0 = atof(item+NCHAR*1);
+      if(strstr(item+NCHAR*2,"\"") != NULL){
+	spherical = 1;
+	rx  =  atof(item+NCHAR*2)/3600;
+	ry  =  atof(item+NCHAR*3)/3600;
+	rx  = 2.0*asin(sin(rx*PI/180.0/2.0)/cos(y0*PI/180.0))*180.0/PI;
+	
+      }else{
+	spherical = 0;
+	rx  =  atof(item+NCHAR*2);
+	ry  =  atof(item+NCHAR*3);
+      }
+      angle = atof(item+NCHAR*4)*PI/180.0;
       
-      polysAll[i].x[0] = +w/2.0*cos(angle) + h/2.0*sin(angle)+x;
-      polysAll[i].y[0] = -w/2.0*sin(angle) + h/2.0*cos(angle)+y;
-      polysAll[i].x[1] = -w/2.0*cos(angle) + h/2.0*sin(angle)+x;
-      polysAll[i].y[1] = +w/2.0*sin(angle) + h/2.0*cos(angle)+y;
-      polysAll[i].x[2] = -w/2.0*cos(angle) - h/2.0*sin(angle)+x;	
-      polysAll[i].y[2] = +w/2.0*sin(angle) - h/2.0*cos(angle)+y;
-      polysAll[i].x[3] = +w/2.0*cos(angle) - h/2.0*sin(angle)+x;
-      polysAll[i].y[3] = -w/2.0*sin(angle) - h/2.0*cos(angle)+y;
+      rotate(x0, y0, +rx/2.0+x0, +ry/2.0+y0, &(polysAll[i].x[0]), &(polysAll[i].y[0]), angle, spherical);
+      rotate(x0, y0, -rx/2.0+x0, +ry/2.0+y0, &(polysAll[i].x[1]), &(polysAll[i].y[1]), angle, spherical);
+      rotate(x0, y0, -rx/2.0+x0, -ry/2.0+y0, &(polysAll[i].x[2]), &(polysAll[i].y[2]), angle, spherical);
+      rotate(x0, y0, +rx/2.0+x0, -ry/2.0+y0, &(polysAll[i].x[3]), &(polysAll[i].y[3]), angle, spherical);
       
       polysAll[i].id      = i;
-      polysAll[i].xmin[0] = x;
-      polysAll[i].xmax[0] = x;
-      polysAll[i].xmin[1] = y;
-      polysAll[i].xmax[1] = y;
+      polysAll[i].xmin[0] = x0;
+      polysAll[i].xmax[0] = x0;
+      polysAll[i].xmin[1] = y0;
+      polysAll[i].xmax[1] = y0;
       for(j=0;j<polysAll[i].N;j++){
-	polysAll[i].xmin[0] = MIN(polysAll[i].xmin[0], polysAll[i].x[j]);
+     	polysAll[i].xmin[0] = MIN(polysAll[i].xmin[0], polysAll[i].x[j]);
       	polysAll[i].xmax[0] = MAX(polysAll[i].xmax[0], polysAll[i].x[j]);
       	polysAll[i].xmin[1] = MIN(polysAll[i].xmin[1], polysAll[i].y[j]);
       	polysAll[i].xmax[1] = MAX(polysAll[i].xmax[1], polysAll[i].y[j]);
       }
       i++;
-      /* ------------------------------------- */
     }
-
+    
   }
   if(i==0){
     fprintf(stderr,"%s: 0 polygon found, check input file. Exiting...\n",MYNAME);
@@ -1362,6 +1354,22 @@ double distAngSpher(const double RA1, double DEC1, double RA2, double DEC2){
   
   return 2.0*asin(sqrt(MAX(EPS/100.0, sin2_dec + cos(DEC1*PI/180.0)*cos(DEC2*PI/180.0)*sin2_ra)))*180.0/PI;
   
+}
+
+void rotate(double x0, double y0, double x, double y, double *xrot, double *yrot, double angle, int spherical){
+  /* Takes positions (in degree if spherical = 1) and returns the rotated coordinates. */
+  
+  if(spherical){
+    double sign  = x - x0 < 0.0 ? -1.0 : 1.0;
+    *yrot = -sign*(distAngSpher(x0, y0, x, y0))*sin(angle) + (y-y0)*cos(angle)+y0;
+    *xrot =  sign*(distAngSpher(x0, y0, x, y0))*cos(angle) + (y-y0)*sin(angle)+x0;
+    *xrot =  2.0*asin(sin((*xrot-x0)*PI/180.0/2.0)/cos(*yrot*PI/180.0))*180.0/PI+x0;
+    
+  }else{
+    *xrot = +(x-x0)*cos(angle) - (y-y0)*sin(angle)+x0;
+    *yrot =  (x-x0)*sin(angle) + (y-y0)*cos(angle)+y0;
+  }
+
 }
 
 gsl_rng *randomInitialize(size_t seed){
