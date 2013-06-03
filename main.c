@@ -19,6 +19,10 @@ TO DO:
 - adapt to be used with python
 
 Modifications:
+v 3.8.4 May 2013
+- increased the number of field to 500
+v 3.8.3 Apr 2013
+- added the area in degree on top of random file
 v 3.8.2 Oct 2012
 - correction at high declination (Thanks Ben!)
 v 3.8.1 Oct 2012
@@ -286,7 +290,7 @@ int flagCat(const Config *para){
     while(fgets(line,NFIELD*NCHAR,fileCatIn) != NULL){
 	if(getStrings(line,item," ",&Ncol)){
 	  i++;
-	  printCount(&i,&N,1000);
+	  if(verbose) printCount(&i,&N,1000);
 	  x[0] = getDoubleValue(item,para->xcol);
 	  x[1] = getDoubleValue(item,para->ycol);
 	  fpixel[0] = roundToNi(x[0]) - 1;
@@ -328,7 +332,7 @@ int flagCat(const Config *para){
     while(fgets(line,NFIELD*NCHAR,fileCatIn) != NULL){
       if(getStrings(line,item," ",&Ncol)){
 	i++;
-	printCount(&i,&N,1000);
+	if(verbose) printCount(&i,&N,1000);
 	x[0] = getDoubleValue(item,para->xcol);
 	x[1] = getDoubleValue(item,para->ycol);
 	
@@ -367,7 +371,7 @@ int randomCat(const Config *para){
     outside the mask:1, inside the mask:0. Otherwise it puts only objects
     outside the mask.*/
   
-  int Npolys,poly_id,flag;
+  int Npolys,poly_id,flag, verbose = 1;
   size_t i, npart;
   double x[2], x0[2], xmin[2], xmax[2], z, area;
   gsl_rng *r = randomInitialize(para->seed);
@@ -501,7 +505,8 @@ int randomCat(const Config *para){
     }else{
       area = (xmax[0] - xmin[0])*(xmax[1] - xmin[1]);
     }
-    fprintf(stderr,"Area = %f\n",area);
+    fprintf(stderr, "Area = %f\n", area);
+    fprintf(fileOut,"# %f\n", area);
     
     if(para->constDen){
       npart =  (size_t)round((double)para->npart*area);
@@ -563,7 +568,8 @@ int randomCat(const Config *para){
     }else{
       area = (xmax[0] - xmin[0])*(xmax[1] - xmin[1]);
     }
-    fprintf(stderr,"Area = %f\n",area);
+    fprintf(stderr, "Area = %f\n", area);
+    fprintf(fileOut, "# %f\n", area);
     
     if(para->constDen){
       npart = (size_t)round((double)para->npart*area);
@@ -655,7 +661,7 @@ int readParameters(int argc, char **argv, Config *para){
     //Help-------------------------------------------------------------------//
     if(!strcmp(argv[i],"-h") || !strcmp(argv[i],"--help") || argc == 1){
       fprintf(stderr,"\n\n                   V E N I C E\n\n");
-      fprintf(stderr,"           mask utility program version 3.8.2 \n\n");
+      fprintf(stderr,"           mask utility program version 3.8.4 \n\n");
       fprintf(stderr,"Usage: %s -m mask.[reg,fits]               [OPTIONS] -> binary mask for visualization\n",argv[0]);
       fprintf(stderr,"    or %s -m mask.[reg,fits] -cat file.cat [OPTIONS] -> objects in/out of mask\n",argv[0]);
       fprintf(stderr,"    or %s -m mask.[reg,fits] -cat -        [OPTIONS] -> objects in/out of mask (from stdin)\n",argv[0]);

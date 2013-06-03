@@ -40,7 +40,7 @@
 #define SWAP(a,b) {swap = (a); (a) = (b); (b) = swap;}
 #define SQUARE(a) ((a)*(a))
 
-#define NFIELD    100
+#define NFIELD    500
 #define NCHAR     20
 #define NVERTICES 100
 
