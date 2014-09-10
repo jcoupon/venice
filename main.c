@@ -19,12 +19,14 @@ TO DO:
 - adapt to be used with python
 
 Modifications:
+v 3.9   Sept 2014
+- bug fixed in the function that reads the .reg file (thanks Sylvain!)
 v 3.8.4 May 2013
 - increased the number of field to 500
 v 3.8.3 Apr 2013
 - added the area in degree on top of random file
 v 3.8.2 Oct 2012
-- correction at high declination (Thanks Ben!)
+- correction at high declination (thanks Ben!)
 v 3.8.1 Oct 2012
 - now reads ellipses, circle and box
 - can read from the stdin with -cat -
@@ -661,7 +663,7 @@ int readParameters(int argc, char **argv, Config *para){
     //Help-------------------------------------------------------------------//
     if(!strcmp(argv[i],"-h") || !strcmp(argv[i],"--help") || argc == 1){
       fprintf(stderr,"\n\n                   V E N I C E\n\n");
-      fprintf(stderr,"           mask utility program version 3.8.4 \n\n");
+      fprintf(stderr,"           mask utility program version 3.9 \n\n");
       fprintf(stderr,"Usage: %s -m mask.[reg,fits]               [OPTIONS] -> binary mask for visualization\n",argv[0]);
       fprintf(stderr,"    or %s -m mask.[reg,fits] -cat file.cat [OPTIONS] -> objects in/out of mask\n",argv[0]);
       fprintf(stderr,"    or %s -m mask.[reg,fits] -cat -        [OPTIONS] -> objects in/out of mask (from stdin)\n",argv[0]);
@@ -992,8 +994,16 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
   while(fgets(line,NFIELD*NCHAR,fileIn) != NULL)
     if(strstr(line,"polygon") != NULL || strstr(line,"circle") != NULL || strstr(line,"ellipse") != NULL || strstr(line,"box") != NULL) NpolysAll += 1;
   rewind(fileIn);
-  Polygon *polysAll = malloc(NpolysAll*sizeof(Polygon));
-  
+  Polygon *polysAll = (Polygon *)malloc(NpolysAll*sizeof(Polygon));
+  // Polygon *polysAll;
+ 
+  for(i=0; i<NpolysAll; i++){
+    polysAll[i].x    = (double *)malloc(NVERTICES*sizeof(double));
+    polysAll[i].y    = (double *)malloc(NVERTICES*sizeof(double));
+    polysAll[i].xmin = (double *)malloc(2*sizeof(double));
+    polysAll[i].xmax = (double *)malloc(2*sizeof(double));
+  }
+
   i=0;
   //Read the file and fill the array with polygons.
   while(fgets(line,NFIELD*NCHAR,fileIn) != NULL){
@@ -1001,8 +1011,10 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
       str_begin = strstr(line,"(")+sizeof(char);
       str_end = strstr(line,")");
       strcpy(str_end,"\n\0");
-      strcpy(line,str_begin);
-      getStrings(line,item,",",&N);
+      //strcpy(line,str_begin);
+      //getStrings(line,item,",",&N);
+      //DEBUGGING
+      getStrings(str_begin, item, ",", &N);
       /* ------------------------------------- *
        * get all coordinates separated by comas.
        */
@@ -1025,7 +1037,7 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
 	polysAll[i].xmax[1] = MAX(polysAll[i].xmax[1], polysAll[i].y[j]);
       }
 
-      //fprintf(stderr,"%f %f %f %f\n", polysAll[i].xmin[0], polysAll[i].xmax[0],polysAll[i].xmin[0], polysAll[i].xmax[0]);
+      //      fprintf(stderr,"%f %f %f %f\n", polysAll[i].xmin[0], polysAll[i].xmax[0],polysAll[i].xmin[1], polysAll[i].xmax[1]);
 
       i++;
       /* ------------------------------------- */
@@ -1033,9 +1045,11 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
       str_begin = strstr(line,"(")+sizeof(char);
       str_end = strstr(line,")");
       strcpy(str_end,"\n\0");
-      strcpy(line,str_begin);
-      getStrings(line,item,",",&N);
-      
+      //strcpy(line,str_begin);
+      //getStrings(line,item,",",&N);
+      //DEBUGGING
+      getStrings(str_begin, item, ",", &N);
+         
       polysAll[i].N = 40;
       x0 = atof(item+NCHAR*0);
       y0 = atof(item+NCHAR*1);
@@ -1077,9 +1091,11 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
       str_begin = strstr(line,"(")+sizeof(char);
       str_end = strstr(line,")");
       strcpy(str_end,"\n\0");
-      strcpy(line,str_begin);
-      getStrings(line,item,",",&N);
-
+      //strcpy(line,str_begin);
+      //getStrings(line,item,",",&N);
+      //DEBUGGING
+      getStrings(str_begin, item, ",", &N);
+   
       polysAll[i].N = 40;
       x0 = atof(item+NCHAR*0);
       y0 = atof(item+NCHAR*1);
@@ -1122,9 +1138,11 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
       str_begin = strstr(line,"(")+sizeof(char);
       str_end = strstr(line,")");
       strcpy(str_end,"\n\0");
-      strcpy(line,str_begin);
-      getStrings(line,item,",",&N);
-      
+      //strcpy(line,str_begin);
+      //getStrings(line,item,",",&N);
+      //DEBUGGING
+      getStrings(str_begin, item, ",", &N);
+   
       polysAll[i].N = 4;
       x0 = atof(item+NCHAR*0);
       y0 = atof(item+NCHAR*1);
@@ -1182,7 +1200,7 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
     minArea += (polysAll[i].xmax[0] - polysAll[i].xmin[0])*(polysAll[i].xmax[1] - polysAll[i].xmin[1]);
   }
   minArea /= 1.0*(double)NpolysAll;
-  
+
   int SplitDim = 0, firstCall = 1;
   return createNode(polysAll,NpolysAll, minArea, SplitDim, xmin, xmax, firstCall); 
 }
@@ -1228,7 +1246,14 @@ Node *createNode(Polygon *polys, size_t Npolys, double minArea, int SplitDim, do
     result->SplitValue = (xmax[result->SplitDim] + xmin[result->SplitDim])/2.0;
 
     //Temporary data
-    Polygon *polysChild = malloc(Npolys*sizeof(Polygon));
+    Polygon *polysChild = (Polygon *)malloc(Npolys*sizeof(Polygon));
+    for(i=0; i<Npolys; i++){
+      polysChild[i].x    = (double *)malloc(NVERTICES*sizeof(double));
+      polysChild[i].y    = (double *)malloc(NVERTICES*sizeof(double));
+      polysChild[i].xmin = (double *)malloc(2*sizeof(double));
+      polysChild[i].xmax = (double *)malloc(2*sizeof(double));
+    }
+
     double xminChild[2], xmaxChild[2];
     for(i=0;i<2;i++){
       xminChild[i] = xmin[i];
@@ -1275,10 +1300,10 @@ Node *createNode(Polygon *polys, size_t Npolys, double minArea, int SplitDim, do
 void free_Polygon(Polygon *polygon, size_t N){
   size_t i;
   for(i=0;i<N;i++){
-    //free(polygon->x);
-    //free(polygon->y);
-    //free(polygon->xmin);
-    //free(polygon->xmax);
+    free(polygon[i].x);
+    free(polygon[i].y);
+    free(polygon[i].xmin);
+    free(polygon[i].xmax);
   }
   free(polygon);
 }

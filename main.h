@@ -82,10 +82,14 @@ typedef struct Complex
 typedef struct Polygon
 {
   int N, id;
-  double x[NVERTICES];
-  double y[NVERTICES];
-  double xmin[2];
-  double xmax[2];
+  // double x[NVERTICES];
+  //double y[NVERTICES];
+  //double xmin[2];
+  //double xmax[2];
+  double *x;
+  double *y;
+  double *xmin;
+  double *xmax;
 } Polygon;
 
 typedef struct Node
@@ -110,7 +114,6 @@ double EPS;
  *----------------------------------------------------------------*/
 
 void testPython();
-
 
 int mask2d(const Config *para);
 int flagCat(const Config *para);
