@@ -19,6 +19,8 @@ TO DO:
 - adapt to be used with python
 
 Modifications:
+v 3.9.1   May 2015
+- now saves the inputFile header (if any) in flagCat
 v 3.9   Sept 2014
 - bug fixed in the function that reads the .reg file (thanks Sylvain!)
 v 3.8.4 May 2013
@@ -290,6 +292,11 @@ int flagCat(const Config *para){
     i = 0;
     if(verbose) fprintf(stderr,"\nProgress =     ");
     while(fgets(line,NFIELD*NCHAR,fileCatIn) != NULL){
+
+      /* keep commented lines */
+      if (line[0] == '#') fprintf(fileOut,"%s",line);  
+      
+      
 	if(getStrings(line,item," ",&Ncol)){
 	  i++;
 	  if(verbose) printCount(&i,&N,1000);
@@ -332,6 +339,10 @@ int flagCat(const Config *para){
     i = 0;
     if(verbose) fprintf(stderr,"Progress =     ");
     while(fgets(line,NFIELD*NCHAR,fileCatIn) != NULL){
+
+      /* keep commented lines */
+      if (line[0] == '#') fprintf(fileOut,"%s",line);  
+      
       if(getStrings(line,item," ",&Ncol)){
 	i++;
 	if(verbose) printCount(&i,&N,1000);
@@ -663,7 +674,7 @@ int readParameters(int argc, char **argv, Config *para){
     //Help-------------------------------------------------------------------//
     if(!strcmp(argv[i],"-h") || !strcmp(argv[i],"--help") || argc == 1){
       fprintf(stderr,"\n\n                   V E N I C E\n\n");
-      fprintf(stderr,"           mask utility program version 3.9 \n\n");
+      fprintf(stderr,"           mask utility program version 3.9.1 \n\n");
       fprintf(stderr,"Usage: %s -m mask.[reg,fits]               [OPTIONS] -> binary mask for visualization\n",argv[0]);
       fprintf(stderr,"    or %s -m mask.[reg,fits] -cat file.cat [OPTIONS] -> objects in/out of mask\n",argv[0]);
       fprintf(stderr,"    or %s -m mask.[reg,fits] -cat -        [OPTIONS] -> objects in/out of mask (from stdin)\n",argv[0]);
