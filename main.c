@@ -1320,13 +1320,12 @@ void free_Polygon(Polygon *polygon, size_t N){
 }
 
 void free_Node(Node *node){
-  if(node->type == LEAF){
-    free(node->poly_id);
-    free(node);
-  }else{
+  if(node->type != LEAF){
     free_Node(node->Left);
     free_Node(node->Right);
   }
+  free(node->poly_id);
+  free(node);
   return;
 }
 
