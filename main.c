@@ -6,16 +6,16 @@ Jean Coupon - Aug. 2012
 main.c for "venice"
 ------------------------
 
-Program that reads a mask file (DS9 type) and a catalogue 
+Program that reads a mask file (DS9 type) and a catalogue
 of objects and computes one of the following tasks:
-1. Creates a pixelized mask. 
+1. Creates a pixelized mask.
    venice -m mask.reg [OPTIONS]
-2. Finds objects inside/outside a mask. 
+2. Finds objects inside/outside a mask.
    venice -m mask.reg -cat file.cat [OPTIONS]
-3. Generates a random catalogue of objects inside/outside a mask. 
+3. Generates a random catalogue of objects inside/outside a mask.
    venice -m mask.reg -r [OPTIONS]
 
-TO DO: 
+TO DO:
 - adapt to be used with python
 
 Modifications:
@@ -34,16 +34,16 @@ v 3.8.1 Oct 2012
 - can read from the stdin with -cat -
 v 3.8 - Aug. 2012
 - a redshift distribution can now be given in a form
-  of an file with histogram through the 
+  of an file with histogram through the
   option "-nz file_nz.in".
-- a redshift range can be given for volume limited 
+- a redshift range can be given for volume limited
   samples
 v 3.5 - Feb. 2012
-- started to implement a python wrapper. 
+- started to implement a python wrapper.
 Contributor: Ben Granett
 v 3.4 - Feb. 2012
 - improved treatment of FITS masks
-- now able to compile without FITS support with 
+- now able to compile without FITS support with
   > make FITS=no
 - prints out limits in command line format
 v 3.3 - Dec 2011
@@ -52,17 +52,17 @@ v 3.3 - Dec 2011
 v 3.2 - Nov 2011
 - new option "-seed number" for the random number generator
 v 3.1 - Oct 2011
-- now supports fits mask file (".fits", image coordinates) 
+- now supports fits mask file (".fits", image coordinates)
 v 3.04 - Oct 2011
 - corrected a bug in flagCat
 v 3.01 - Oct 2011
-- added "+EPS" in the algorithm to find an 
+- added "+EPS" in the algorithm to find an
 object within a polygon (was incorrect in some
 very rare cases)
 v 3.0 - Oct 2011
 - polygons are now stored in a tree with leaves
 being either empty of polygons of small enough
-to contain a few polygons only (currently set 
+to contain a few polygons only (currently set
 to the mean size of polygons... this has probably to
 be improved).
 v 2.2 - Sept 2011
@@ -71,11 +71,11 @@ v 2.2 - Sept 2011
 v 2.1 - July 2010
 - some precisions added in Makefile and README
 - in 'flagCat', the limits of the mask are no
-longer used as "default". If no limits are 
+longer used as "default". If no limits are
 definied, an object oustide the mask limits will be
 now properly considered as "outside the mask".
-v 2.02 - Feb 2nd 2010 
-- minor changes (changed some of 
+v 2.02 - Feb 2nd 2010
+- minor changes (changed some of
 printf formats to work with 64bit machines)
 v 2.01 - March 5 2009
 - bug corrected in flagcat (wrong ymax)
@@ -108,7 +108,7 @@ int main(int argc, char **argv)
   EPS   = determineMachineEpsilon();
   IDERR = determineSize_tError();
   Config para;
-  
+
   /* tasks */
   switch (readParameters(argc,argv,&para)){
   case 1:
@@ -129,29 +129,29 @@ int main(int argc, char **argv)
  *----------------------------------------------------------------*/
 
 int  mask2d(const Config *para){
-  /*Returns the mask in gsl histogram format and writes the mask in fileOut. 
-    The limits are the extrema of the extreme polygons in fileRegIn. 
-    The pixel is set to 0 when inside the mask and 1 otherwise. 
+  /*Returns the mask in gsl histogram format and writes the mask in fileOut.
+    The limits are the extrema of the extreme polygons in fileRegIn.
+    The pixel is set to 0 when inside the mask and 1 otherwise.
     For fits format, it writes the pixel value.
   */
-   
+
   int Npolys,poly_id,flag;
   size_t i, j, count, total;
   double x[2], x0[2], xmin[2], xmax[2];
-  
+
   FILE *fileOut = fopenAndCheck(para->fileOutName,"w");
 
   gsl_histogram2d *mask = gsl_histogram2d_alloc(para->nx,para->ny);
-  total = para->nx*para->ny;  
-  
+  total = para->nx*para->ny;
+
   if(checkFileExt(para->fileRegInName,".fits")){           /* fits file */
     long fpixel[2], naxes[2];
     int bitpix, status = 0;
     double (*convert)(void *,long ) = NULL;
-    
+
     /* read fits file and put in table */
-    void *table = readFits(para,&bitpix,&status,naxes,&convert);     
-    
+    void *table = readFits(para,&bitpix,&status,naxes,&convert);
+
     /* define limits */
     xmin[0] = xmin[1] = 1.0;
     xmax[0] = naxes[0];
@@ -163,9 +163,9 @@ int  mask2d(const Config *para){
     /* print out limits */
     fprintf(stderr,"limits:\n");
     fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
-    
+
     gsl_histogram2d_set_ranges_uniform(mask,xmin[0],xmax[0],xmin[1],xmax[1]);
-    
+
     /* ATTENTION "convert" converts everything into double */
     fprintf(stderr,"\nProgress =     ");
     for(i=0; i<mask->nx; i++){
@@ -180,17 +180,17 @@ int  mask2d(const Config *para){
       }
     }
     fprintf(stderr,"\b\b\b\b100%%\n");
-    
+
     free(table);
 
   }else if(checkFileExt(para->fileRegInName,".reg")){          /* ds9 file */
-    
+
     FILE *fileRegIn = fopenAndCheck(para->fileRegInName,"r");
     Node *polyTree  = readPolygonFileTree(fileRegIn,xmin,xmax);
     Polygon *polys  = (Polygon *)polyTree->polysAll;
     Npolys          = polyTree->Npolys;
     fclose(fileRegIn);
-    
+
     /* define limits */
     if(para->minDefinied[0]) xmin[0] = para->min[0];
     if(para->maxDefinied[0]) xmax[0] = para->max[0];
@@ -199,14 +199,14 @@ int  mask2d(const Config *para){
     /* print out limits */
     fprintf(stderr,"limits:\n");
     fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
-    
+
     /* reference point. It must be outside the mask */
     x0[0] = xmin[0] - 1.0; x0[1] = xmin[1] - 1.0;
-    
+
     gsl_histogram2d_set_ranges_uniform(mask,xmin[0],xmax[0],xmin[1],xmax[1]);
-    
+
     total = para->nx*para->ny;
-    
+
     fprintf(stderr,"Progress =     ");
     for(i=0; i<mask->nx; i++){
       for(j=0; j<mask->ny; j++){
@@ -214,7 +214,7 @@ int  mask2d(const Config *para){
 	printCount(&count,&total,1000);
    	x[0] = (mask->xrange[i]+mask->xrange[i+1])/2.0; /* center of the pixel */
 	x[1] = (mask->yrange[j]+mask->yrange[j+1])/2.0;
-	/* 1 = outside the mask, 0 = inside the mask */     
+	/* 1 = outside the mask, 0 = inside the mask */
 	if(!insidePolygonTree(polyTree,x0,x,&poly_id)) mask->bin[i*mask->ny+j] = 1.0;
       }
     }
@@ -224,7 +224,7 @@ int  mask2d(const Config *para){
     fprintf(stderr,"%s: mask file format not recognized. Please provide .reg, .fits or no mask but input limits. Exiting...\n",MYNAME);
     exit(EXIT_FAILURE);
   }
-  
+
   /* write the output file */
   for(j=0; j<mask->ny; j++){
     for(i=0; i<mask->nx; i++){
@@ -233,23 +233,23 @@ int  mask2d(const Config *para){
     fprintf(fileOut,"\n");
   }
   fclose(fileOut);
-  
+
   return EXIT_SUCCESS;
 }
 
 int flagCat(const Config *para){
   /*
     Reads fileCatIn and add a flag at the end of the line. 1 is outside
-    the mask and 0 is inside the mask. xcol and ycol are the column ids 
+    the mask and 0 is inside the mask. xcol and ycol are the column ids
     of resp. x coordinate and y coordinate.
     For fits format, it writes the pixel value.
   */
-  
+
   int Npolys, poly_id, flag, verbose = 1;
   size_t i,N, Ncol;
   double x[2], x0[2], xmin[2], xmax[2];
   char line[NFIELD*NCHAR], item[NFIELD*NCHAR],*str_end;
-  
+
   FILE *fileOut   = fopenAndCheck(para->fileOutName,"w");
   FILE *fileCatIn = fopenAndCheck(para->fileCatInName,"r");
 
@@ -262,20 +262,20 @@ int flagCat(const Config *para){
   }else{
     verbose = 0;
   }
-  
+
   if(checkFileExt(para->fileRegInName,".fits")){
     if(para->coordType != CART){
       fprintf(stderr,"%s: fits file detected. coord should be set to cart for image coordinates. Exiting...\n",MYNAME);
       exit(EXIT_FAILURE);
     }
-    
+
     long fpixel[2], naxes[2];
     int bitpix, status = 0;
     double (*convert)(void *,long ) = NULL;
-    
+
     /* read fits file and put in table */
-    void *table = readFits(para,&bitpix,&status,naxes,&convert);     
-    
+    void *table = readFits(para,&bitpix,&status,naxes,&convert);
+
     /* define limits */
     xmin[0] = xmin[1] = 1.0;
     xmax[0] = naxes[0];
@@ -287,16 +287,16 @@ int flagCat(const Config *para){
     /* print out limits */
     fprintf(stderr,"limits:\n");
     fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
-    
+
     /* ATTENTION "convert" converts everything into double */
     i = 0;
     if(verbose) fprintf(stderr,"\nProgress =     ");
     while(fgets(line,NFIELD*NCHAR,fileCatIn) != NULL){
 
       /* keep commented lines */
-      if (line[0] == '#') fprintf(fileOut,"%s",line);  
-      
-      
+      if (line[0] == '#') fprintf(fileOut,"%s",line);
+
+
 	if(getStrings(line,item," ",&Ncol)){
 	  i++;
 	  if(verbose) printCount(&i,&N,1000);
@@ -306,7 +306,7 @@ int flagCat(const Config *para){
 	  fpixel[1] = roundToNi(x[1]) - 1;
 	  str_end = strstr(line,"\n");/* cariage return to the end of the line */
 	  strcpy(str_end,"\0");       /* "end" symbol to the line              */
-	  if(xmin[0] < x[0] && x[0] < xmax[0] && xmin[1] < x[1] && x[1] < xmax[1]){ 
+	  if(xmin[0] < x[0] && x[0] < xmax[0] && xmin[1] < x[1] && x[1] < xmax[1]){
 	    fprintf(fileOut,"%s %g\n",line,convert(table,fpixel[1]*naxes[0]+fpixel[0]));
 	  }else{
 	    fprintf(fileOut,"%s %d\n",line,-99);
@@ -316,14 +316,14 @@ int flagCat(const Config *para){
     if(verbose) fprintf(stderr,"\b\b\b\b100%%\n");
 
     free(table);
-    
+
   }else if(checkFileExt(para->fileRegInName,".reg")){
     FILE *fileRegIn = fopenAndCheck(para->fileRegInName,"r");
     Node *polyTree  = readPolygonFileTree(fileRegIn,xmin,xmax);
     Polygon *polys = (Polygon *)polyTree->polysAll;
     Npolys          = polyTree->Npolys;
     fclose(fileRegIn);
-    
+
     /* or if the limits are defined by the user */
     if(para->minDefinied[0]) xmin[0] = para->min[0];
     if(para->maxDefinied[0]) xmax[0] = para->max[0];
@@ -332,36 +332,36 @@ int flagCat(const Config *para){
     /* print out limits */
     fprintf(stderr,"limits:\n");
     fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
-    
+
     /* reference point. It must be outside the mask */
     x0[0] = xmin[0] - 1.0; x0[1] = xmin[1] - 1.0;
-    
+
     i = 0;
     if(verbose) fprintf(stderr,"Progress =     ");
     while(fgets(line,NFIELD*NCHAR,fileCatIn) != NULL){
 
       /* keep commented lines */
-      if (line[0] == '#') fprintf(fileOut,"%s",line);  
-      
+      if (line[0] == '#') fprintf(fileOut,"%s",line);
+
       if(getStrings(line,item," ",&Ncol)){
 	i++;
 	if(verbose) printCount(&i,&N,1000);
 	x[0] = getDoubleValue(item,para->xcol);
 	x[1] = getDoubleValue(item,para->ycol);
-	
+
 	if(flag=0, !insidePolygonTree(polyTree,x0,x,&poly_id)) flag = 1;
-	
+
 	str_end = strstr(line,"\n");/* cariage return to the end of the line */
 	strcpy(str_end,"\0");       /* "end" symbol to the line */
 	switch (para->format){
 	case 1: /* only objects outside the mask and inside the user's definied limits */
-	  if(flag) fprintf(fileOut,"%s\n",line);  
+	  if(flag) fprintf(fileOut,"%s\n",line);
 	  break;
 	case 2: /* only objects inside the mask or outside the user's definied limits */
-	  if(!flag) fprintf(fileOut,"%s\n",line);  
+	  if(!flag) fprintf(fileOut,"%s\n",line);
 	  break;
 	case 3: /* all objects with the flag */
-	  fprintf(fileOut,"%s %d\n",line,flag);    
+	  fprintf(fileOut,"%s %d\n",line,flag);
 	}
       }
     }
@@ -371,35 +371,35 @@ int flagCat(const Config *para){
     fprintf(stderr,"%s: mask file format not recognized. Please provide .reg, .fits or no mask with input limits. Exiting...\n",MYNAME);
     exit(EXIT_FAILURE);
   }
-  
+
   fclose(fileOut);
   fclose(fileCatIn);
-  
+
   return(EXIT_SUCCESS);
 }
 
 int randomCat(const Config *para){
   /*Generates a random catalogue inside the mask (uniform PDF).
-    If "all", it puts all objects and add a flag such as: 
+    If "all", it puts all objects and add a flag such as:
     outside the mask:1, inside the mask:0. Otherwise it puts only objects
     outside the mask.*/
-  
+
   int Npolys,poly_id,flag, verbose = 1;
   size_t i, npart;
   double x[2], x0[2], xmin[2], xmax[2], z, area;
   gsl_rng *r = randomInitialize(para->seed);
-  
+
   FILE *fileOut = fopenAndCheck(para->fileOutName,"w");
-  
+
   /* load redshift distribution */
   /* GSL convention: bin[i] corresponds to range[i] <= x < range[i+1] */
   FILE *fileNofZ;
   size_t Nbins, Ncol;
   char line[NFIELD*NCHAR], item[NFIELD*NCHAR];
-  
+
   gsl_histogram *nz;
   gsl_histogram_pdf *nz_PDF;
-  
+
   /* DEBUGGING
     for(i=0;i<2000;i++){
     z = (double)i/1000.0;
@@ -415,10 +415,10 @@ int randomCat(const Config *para){
       if(getStrings(line,item," ",&Ncol))  Nbins++;
     rewind(fileNofZ);
     fprintf(stderr,"Nbins = %zd\n",Nbins);
-    
+
     nz     = gsl_histogram_alloc(Nbins);
     nz_PDF = gsl_histogram_pdf_alloc (Nbins);
-    
+
     i = 0;
     while(fgets(line,NFIELD*NCHAR, fileNofZ) != NULL){
       if(getStrings(line,item," ",&Ncol)){
@@ -431,14 +431,14 @@ int randomCat(const Config *para){
     nz->range[i]   = 100.0;
     gsl_histogram_pdf_init (nz_PDF, nz);
   }
-  
+
   if(para->zrange){
     Nbins= 1000;
     double delta = (para->zmax - para->zmin)/(double)Nbins;
-    
+
     nz     = gsl_histogram_alloc(Nbins);
     nz_PDF = gsl_histogram_pdf_alloc (Nbins);
-    
+
     for(i=0;i<Nbins;i++){
       nz->range[i] = para->zmin + delta*(double)i;
       nz->bin[i]   = dvdz(nz->range[i] + delta/2.0, para->a);
@@ -452,15 +452,15 @@ int randomCat(const Config *para){
     if(para->coordType != CART){
       fprintf(stderr,"%s: fits file detected. coord should be set to cart for image coordinates. Exiting...\n",MYNAME);
       exit(EXIT_FAILURE);
-    }    
-    
+    }
+
     long fpixel[2], naxes[2];
     int bitpix, status = 0;
     double (*convert)(void *,long ) = NULL;
-    
+
     /* read fits file and put in table */
-    void *table = readFits(para,&bitpix,&status,naxes,&convert);     
-    
+    void *table = readFits(para,&bitpix,&status,naxes,&convert);
+
     /* define limits */
     xmin[0] = xmin[1] = 1.0;
     xmax[0] = naxes[0];
@@ -472,7 +472,7 @@ int randomCat(const Config *para){
     /* print out limits */
     fprintf(stderr,"limits:\n");
     fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
-    
+
     /* ATTENTION "convert" converts everything into double */
     fprintf(stderr,"\nProgress =     ");
     for(i=0;i<para->npart;i++){
@@ -489,17 +489,17 @@ int randomCat(const Config *para){
       }
     }
     fprintf(stderr,"\b\b\b\b100%%\n");
-    
+
     free(table);
-    
+
   }else if(checkFileExt(para->fileRegInName,".reg")){
-    
+
     FILE *fileRegIn = fopenAndCheck(para->fileRegInName,"r");
     Node *polyTree  = readPolygonFileTree(fileRegIn,xmin,xmax);
     Polygon *polys = (Polygon *)polyTree->polysAll;
     Npolys          = polyTree->Npolys;
     fclose(fileRegIn);
-    
+
     /* or if the limits are defined by the user */
     if(para->minDefinied[0]) xmin[0] = para->min[0];
     if(para->maxDefinied[0]) xmax[0] = para->max[0];
@@ -508,10 +508,10 @@ int randomCat(const Config *para){
     /* print out limits */
     fprintf(stderr,"limits:\n");
     fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
-    
+
     /* reference point. It must be outside the mask */
     x0[0] = xmin[0] - 1.0; x0[1] = xmin[1] - 1.0;
-    
+
     //fprintf(stderr,"xmin = %f \nxmax = %f \nymin = %f \nymax = %f\n",xmin[0],xmax[0],xmin[1],xmax[1]);
     if(para->coordType == RADEC){
       area = (xmax[0] - xmin[0])*(sin(xmax[1]*PI/180.0) - sin(xmin[1]*PI/180.0))*180.0/PI;
@@ -520,14 +520,14 @@ int randomCat(const Config *para){
     }
     fprintf(stderr, "Area = %f\n", area);
     fprintf(fileOut,"# %f\n", area);
-    
+
     if(para->constDen){
       npart =  (size_t)round((double)para->npart*area);
     }else{
       npart = para->npart;
     }
     fprintf(stderr,"Creates a random catalogue with N = %zd objects. Format = %d\n",npart,para->format);
-    
+
     fprintf(stderr,"Progress =     ");
     for(i=0;i<npart;i++){
       printCount(&i,&npart,1000);
@@ -539,7 +539,7 @@ int randomCat(const Config *para){
 	x[1] = gsl_ran_flat(r,sin(xmin[1]*PI/180.0),sin(xmax[1]*PI/180.0));
 	x[1] = asin(x[1])*180.0/PI;
       }
-      /* 1 = outside the mask, 0 = inside the mask */     
+      /* 1 = outside the mask, 0 = inside the mask */
       if(flag=0,!insidePolygonTree(polyTree,x0,x,&poly_id)) flag = 1;
       if(para->nz || para->zrange){
 	z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
@@ -583,7 +583,7 @@ int randomCat(const Config *para){
     }
     fprintf(stderr, "Area = %f\n", area);
     fprintf(fileOut, "# %f\n", area);
-    
+
     if(para->constDen){
       npart = (size_t)round((double)para->npart*area);
     }else{
@@ -615,12 +615,12 @@ int randomCat(const Config *para){
     fprintf(stderr,"%s: mask file format not recognized. Please provide .reg, .fits or no mask with input limits. Exiting...\n",MYNAME);
     exit(EXIT_FAILURE);
   }
-  
+
   if(para->nz || para->zrange){
     gsl_histogram_pdf_free (nz_PDF);
     gsl_histogram_free (nz);
   }
-  
+
   fclose(fileOut);
   return(EXIT_SUCCESS);
 }
@@ -649,13 +649,13 @@ int readParameters(int argc, char **argv, Config *para){
   para->constDen  = 0;
   para->nz        = 0;
   para->zrange    = 0;
-  
+
   /* default cosmology <=> WMAP5 */
   para->a[0] = H0;
   para->a[1] = Omega_M;
   para->a[2] = Omega_L;
   para->a[3] = c;
-  
+
 
   for(i=0;i<2;i++){
     para->minDefinied[i] = 0;
@@ -663,13 +663,13 @@ int readParameters(int argc, char **argv, Config *para){
     para->min[i] = 0.0;
     para->max[i] = 0.0;
   }
-  
+
   strcpy(MYNAME,"venice");
   strcpy(para->fileOutName,"");
   strcpy(para->fileCatInName,"\0");
   strcpy(para->fileRegInName,"\0");
   strcpy(para->fileNofZName,"\0");
-  
+
   for(i=0;i<argc;i++){
     //Help-------------------------------------------------------------------//
     if(!strcmp(argv[i],"-h") || !strcmp(argv[i],"--help") || argc == 1){
@@ -810,7 +810,7 @@ int readParameters(int argc, char **argv, Config *para){
 	exit(-1);
       }
       para->maxDefinied[1] = 1;
-      para->max[1] = atof(argv[i+1]); 
+      para->max[1] = atof(argv[i+1]);
     }
      //Input catalogue (if -cat set)------------------------------------------//
     if(!strcmp(argv[i],"-nz")){
@@ -845,9 +845,9 @@ int readParameters(int argc, char **argv, Config *para){
     }
     //Coordinates type-----------------------------------------//
     if(!strcmp(argv[i],"-coord")) {
-      if(!strcmp(argv[i+1],"spher")){ 
+      if(!strcmp(argv[i+1],"spher")){
 	para->coordType = RADEC;
-      }else if(!strcmp(argv[i+1],"cart")) {  
+      }else if(!strcmp(argv[i+1],"cart")) {
 	para->coordType = CART;
       }
     }
@@ -858,7 +858,7 @@ int readParameters(int argc, char **argv, Config *para){
 	exit(-1);
       }
       if(atoi(argv[i+1]) > 0) para->seed = atoi(argv[i+1]);
-    }    
+    }
   }
   //If no mask file is provided-----------------------------------------//
   if (nomask){
@@ -879,7 +879,7 @@ int readParameters(int argc, char **argv, Config *para){
       fprintf(stderr,"Usage: %s -m mask.reg               [OPTIONS]\n",argv[0]);
       fprintf(stderr,"    or %s -m mask.reg -cat file.cat [OPTIONS]\n",argv[0]);
       fprintf(stderr,"    or %s -m mask.reg -r            [OPTIONS]\n",argv[0]);
-      exit(EXIT_FAILURE); 
+      exit(EXIT_FAILURE);
     }
   }
   //----------------------------------------------------------------------//
@@ -892,12 +892,12 @@ int readParameters(int argc, char **argv, Config *para){
 
 int insidePolygonTree(Node *polyTree, double x0[2], double x[2], int *poly_id){
   /*Returns 1 if the point (x,y) is inside one of the polygons in
-    polys. Returns 0 if the object is oustide of any polygon or outside the 
+    polys. Returns 0 if the object is oustide of any polygon or outside the
     mask limits. See insidePolygon() for the algorithm explanations.*/
-  
+
   int i,j,k,Ncross,result;
-  double s,t,D; 
-  
+  double s,t,D;
+
   if(polyTree->Npolys == 0){
     *poly_id = -1;
     return 0;
@@ -925,8 +925,8 @@ int insidePolygonTree(Node *polyTree, double x0[2], double x[2], int *poly_id){
 	    D = (polys[i].x[0]-polys[i].x[j])*(x[1]-x0[1])-(polys[i].y[0]-polys[i].y[j])*(x[0]-x0[0]);
 	    s = ((x[0]-x0[0])*(polys[i].y[j]-x[1])-(x[1]-x0[1])*(polys[i].x[j]-x[0]))/D;
 	    t = ((polys[i].x[j]-x[0])*(polys[i].y[0]-polys[i].y[j])-(polys[i].y[j]-x[1])*(polys[i].x[0]-polys[i].x[j]))/D;
-	  } 
-	  if(0.0 < s && s < 1.0 + EPS && 0.0 < t && t < 1.0 + EPS) Ncross++;	
+	  }
+	  if(0.0 < s && s < 1.0 + EPS && 0.0 < t && t < 1.0 + EPS) Ncross++;
 	}
 	if(GSL_IS_ODD(Ncross)){
 	  *poly_id = i;
@@ -937,30 +937,30 @@ int insidePolygonTree(Node *polyTree, double x0[2], double x[2], int *poly_id){
     *poly_id = -1;
     return 0;
   }
-  
+
   return result;
 }
 
 int insidePolygon(Polygon *polys, int Npolys, double x0, double y0, double x, double y, int *poly_id){
- 
+
   /****************************OBSOLETE ******************************
-    
+
     Returns 1 if the point (x,y) is inside one of the polygons in
-    polys. The id of the first polygon in which the point is 
-    found is also returned in poly_id. If the point is found to be outside 
+    polys. The id of the first polygon in which the point is
+    found is also returned in poly_id. If the point is found to be outside
     all polygons, the function returns 0 and poly_id is set to -1.
-    The function first checks if the point is inside the square drawn 
-    by the extrema of each polygon ("computationaly" more effecient). 
-    If yes, it counts how many times the segment {(x0,y0),(x,y)} crosses 
-    the sides of the polygon (Ncross). (x,y) inside the polygon 
+    The function first checks if the point is inside the square drawn
+    by the extrema of each polygon ("computationaly" more effecient).
+    If yes, it counts how many times the segment {(x0,y0),(x,y)} crosses
+    the sides of the polygon (Ncross). (x,y) inside the polygon
     implies Ncross is an odd number if the point (x0,y0) is outside the polygon
     (then the point (x0,y0) must be chosen outside any polygon).*/
   int i,j,Ncross;
   double s,t,D;
 
-  
+
   for(i=0;i<Npolys;i++){
-   
+
     if(polys[i].xmin[0] < x && x < polys[i].xmax[0] && polys[i].xmin[1] < y && y < polys[i].xmax[1]){
       //the object is inside the square around the polygon
       Ncross=0;
@@ -973,8 +973,8 @@ int insidePolygon(Polygon *polys, int Npolys, double x0, double y0, double x, do
 	  D = (polys[i].x[0]-polys[i].x[j])*(y-y0)-(polys[i].y[0]-polys[i].y[j])*(x-x0);
 	  s = ((x-x0)*(polys[i].y[j]-y)-(y-y0)*(polys[i].x[j]-x))/D;
 	  t = ((polys[i].x[j]-x)*(polys[i].y[0]-polys[i].y[j])-(polys[i].y[j]-y)*(polys[i].x[0]-polys[i].x[j]))/D;
-	} 
-	if(0.0 < s && s < 1.0 + EPS && 0.0 < t && t < 1.0 + EPS) Ncross++;	
+	}
+	if(0.0 < s && s < 1.0 + EPS && 0.0 < t && t < 1.0 + EPS) Ncross++;
       }
       if(GSL_IS_ODD(Ncross)){
 	*poly_id = i;
@@ -999,7 +999,7 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
   int i,j, spherical;
   size_t N, NpolysAll;
   double x0, y0, x, y, r, rx, ry, alpha, angle;
-  
+
   NpolysAll = 0;
   //Read the entire file and count the total number of polygons, NpolysAll.
   while(fgets(line,NFIELD*NCHAR,fileIn) != NULL)
@@ -1007,7 +1007,7 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
   rewind(fileIn);
   Polygon *polysAll = (Polygon *)malloc(NpolysAll*sizeof(Polygon));
   // Polygon *polysAll;
- 
+
   for(i=0; i<NpolysAll; i++){
     polysAll[i].x    = (double *)malloc(NVERTICES*sizeof(double));
     polysAll[i].y    = (double *)malloc(NVERTICES*sizeof(double));
@@ -1060,19 +1060,25 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
       //getStrings(line,item,",",&N);
       //DEBUGGING
       getStrings(str_begin, item, ",", &N);
-         
+
       polysAll[i].N = 40;
       x0 = atof(item+NCHAR*0);
       y0 = atof(item+NCHAR*1);
-      
+
       if(strstr(item+NCHAR*2,"\"") != NULL){
-	spherical = 1;
-	r  =  atof(item+NCHAR*2)/3600;
+            spherical = 1;
+            r  =  atof(item+NCHAR*2)/3600.0;
+      }else if(strstr(item+NCHAR*2,"\'") != NULL){
+            spherical = 1;
+            r  =  atof(item+NCHAR*2)/60.0;
+      }else if(strstr(item+NCHAR*2,"d") != NULL){
+            spherical = 1;
+            r  =  atof(item+NCHAR*2);
       }else{
-	spherical = 0;
-	r  =  atof(item+NCHAR*2);
+            spherical = 0;
+            r  =  atof(item+NCHAR*2);
       }
-      
+
       polysAll[i].id      = i;
       polysAll[i].xmin[0] = x0;
       polysAll[i].xmax[0] = x0;
@@ -1082,15 +1088,15 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
       	alpha            = TWOPI*(double)j/((double)polysAll[i].N);
 	polysAll[i].x[j] = r*cos(alpha) + x0;
 	polysAll[i].y[j] = r*sin(alpha) + y0;
-	
+
 	if(spherical){
 	  polysAll[i].x[j] = 2.0*asin(sin((polysAll[i].x[j]-x0)*PI/180/2.0)/cos(polysAll[i].y[j]*PI/180))*180.0/PI+x0;
 	}
-	
-	/* DEBUGGING 
+
+	/* DEBUGGING
 	fprintf(stderr,"%f %f\n",r, distAngSpher(x0, y0, polysAll[i].x[j], polysAll[i].y[j]));
 	*/
-	
+
 	polysAll[i].xmin[0] = MIN(polysAll[i].xmin[0], polysAll[i].x[j]);
       	polysAll[i].xmax[0] = MAX(polysAll[i].xmax[0], polysAll[i].x[j]);
       	polysAll[i].xmin[1] = MIN(polysAll[i].xmin[1], polysAll[i].y[j]);
@@ -1106,7 +1112,7 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
       //getStrings(line,item,",",&N);
       //DEBUGGING
       getStrings(str_begin, item, ",", &N);
-   
+
       polysAll[i].N = 40;
       x0 = atof(item+NCHAR*0);
       y0 = atof(item+NCHAR*1);
@@ -1120,7 +1126,7 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
 	ry  =  atof(item+NCHAR*3);
       }
       angle = atof(item+NCHAR*4)*PI/180.0;
-      
+
       polysAll[i].id      = i;
       polysAll[i].xmin[0] = x0;
       polysAll[i].xmax[0] = x0;
@@ -1130,20 +1136,20 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
       	alpha            = TWOPI*(double)j/((double)polysAll[i].N);
 	x = rx*cos(alpha) + x0;
 	y = ry*sin(alpha) + y0;
-	
+
 	if(spherical){
 	  x = 2.0*asin(sin((x-x0)*PI/180/2.0)/cos(y*PI/180))*180.0/PI+x0;
 	}
-	
+
 	rotate(x0, y0, x, y, &(polysAll[i].x[j]), &(polysAll[i].y[j]), angle, spherical);
-	
+
 	polysAll[i].xmin[0] = MIN(polysAll[i].xmin[0], polysAll[i].x[j]);
       	polysAll[i].xmax[0] = MAX(polysAll[i].xmax[0], polysAll[i].x[j]);
       	polysAll[i].xmin[1] = MIN(polysAll[i].xmin[1], polysAll[i].y[j]);
       	polysAll[i].xmax[1] = MAX(polysAll[i].xmax[1], polysAll[i].y[j]);
       }
       i++;
-      
+
       /* ------------------------------------- */
     }else if(strstr(line,"box") != NULL){
       str_begin = strstr(line,"(")+sizeof(char);
@@ -1153,7 +1159,7 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
       //getStrings(line,item,",",&N);
       //DEBUGGING
       getStrings(str_begin, item, ",", &N);
-   
+
       polysAll[i].N = 4;
       x0 = atof(item+NCHAR*0);
       y0 = atof(item+NCHAR*1);
@@ -1162,19 +1168,19 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
 	rx  =  atof(item+NCHAR*2)/3600;
 	ry  =  atof(item+NCHAR*3)/3600;
 	rx  = 2.0*asin(sin(rx*PI/180.0/2.0)/cos(y0*PI/180.0))*180.0/PI;
-	
+
       }else{
 	spherical = 0;
 	rx  =  atof(item+NCHAR*2);
 	ry  =  atof(item+NCHAR*3);
       }
       angle = atof(item+NCHAR*4)*PI/180.0;
-      
+
       rotate(x0, y0, +rx/2.0+x0, +ry/2.0+y0, &(polysAll[i].x[0]), &(polysAll[i].y[0]), angle, spherical);
       rotate(x0, y0, -rx/2.0+x0, +ry/2.0+y0, &(polysAll[i].x[1]), &(polysAll[i].y[1]), angle, spherical);
       rotate(x0, y0, -rx/2.0+x0, -ry/2.0+y0, &(polysAll[i].x[2]), &(polysAll[i].y[2]), angle, spherical);
       rotate(x0, y0, +rx/2.0+x0, -ry/2.0+y0, &(polysAll[i].x[3]), &(polysAll[i].y[3]), angle, spherical);
-      
+
       polysAll[i].id      = i;
       polysAll[i].xmin[0] = x0;
       polysAll[i].xmax[0] = x0;
@@ -1188,7 +1194,7 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
       }
       i++;
     }
-    
+
   }
   if(i==0){
     fprintf(stderr,"%s: 0 polygon found, check input file. Exiting...\n",MYNAME);
@@ -1196,7 +1202,7 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
   }else{
     fprintf(stderr,"%d polygon(s) found\n",i);
   }
-  
+
   double minArea;
   xmin[0] = polysAll[0].xmin[0];
   xmax[0] = polysAll[0].xmax[0];
@@ -1213,17 +1219,17 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
   minArea /= 1.0*(double)NpolysAll;
 
   int SplitDim = 0, firstCall = 1;
-  return createNode(polysAll,NpolysAll, minArea, SplitDim, xmin, xmax, firstCall); 
+  return createNode(polysAll,NpolysAll, minArea, SplitDim, xmin, xmax, firstCall);
 }
 
 Node *createNode(Polygon *polys, size_t Npolys, double minArea, int SplitDim, double xmin[2], double xmax[2], int firstCall){
   size_t i,j,SplitDim_new;
-  
+
   //Allocate memory for THIS node
   Node *result = (Node *)malloc(sizeof(Node));
   static size_t countNodes, NpolysAll;
   static void   *root, *polysAll;
-  
+
   //Root & node id
   if(firstCall){
     root         = result;
@@ -1236,22 +1242,22 @@ Node *createNode(Polygon *polys, size_t Npolys, double minArea, int SplitDim, do
   result->Npolys    = Npolys;
   result->NpolysAll = NpolysAll;
   countNodes++;
-  
-  //Copy address of the complete polygon sample and 
+
+  //Copy address of the complete polygon sample and
   //save ids of polygons inside the node
   result->polysAll     = polysAll;
   result->poly_id      = (int *)malloc(Npolys*sizeof(int));
   for(i=0;i<Npolys;i++){
     result->poly_id[i] = polys[i].id;
-  }  
-  
+  }
+
   double area = (xmax[0]-xmin[0])*(xmax[1]-xmin[1]);
-  //Leaf: either no polygon or cell smaller than minArea  
+  //Leaf: either no polygon or cell smaller than minArea
   if(result->Npolys == 0 || area < minArea) {
     result->type     = LEAF;
     result->Left     = NULL;
     result->Right    = NULL;
-  }else{    
+  }else{
     result->type       = NODE;
     result->SplitDim   = SplitDim;
     result->SplitValue = (xmax[result->SplitDim] + xmin[result->SplitDim])/2.0;
@@ -1270,11 +1276,11 @@ Node *createNode(Polygon *polys, size_t Npolys, double minArea, int SplitDim, do
       xminChild[i] = xmin[i];
       xmaxChild[i] = xmax[i];
     }
-    
+
     //New splitDim for children
     SplitDim++;
     if(SplitDim > 1)  SplitDim = 0;
-    
+
     //"left" -------------------
     //Set new right limit
     xmaxChild[result->SplitDim] = result->SplitValue;
@@ -1284,9 +1290,9 @@ Node *createNode(Polygon *polys, size_t Npolys, double minArea, int SplitDim, do
 	cpyPolygon(&polysChild[j],&polys[i]);
 	j++;
       }
-    } 
+    }
     result->Left = createNode(polysChild,j,minArea,SplitDim,xminChild,xmaxChild,0);
-    
+
     //"right" -------------------
     //Restore right limit and set new left limit
     xmaxChild[result->SplitDim] = xmax[result->SplitDim];
@@ -1297,14 +1303,14 @@ Node *createNode(Polygon *polys, size_t Npolys, double minArea, int SplitDim, do
 	cpyPolygon(&polysChild[j],&polys[i]);
 	j++;
       }
-    } 
+    }
     result->Right = createNode(polysChild,j,minArea,SplitDim,xminChild,xmaxChild,0);
-    
+
     free_Polygon(polysChild,Npolys);
   }
-  
+
   result->Nnodes=countNodes;
-  
+
   return result;
 }
 
@@ -1332,7 +1338,7 @@ void free_Node(Node *node){
 void cpyPolygon(Polygon *a, Polygon *b){
   /*Copies b into a*/
   size_t i;
-  
+
   a->N  = b->N;
   a->id = b->id;
   for(i=0;i<NVERTICES;i++){
@@ -1351,20 +1357,20 @@ void cpyPolygon(Polygon *a, Polygon *b){
  *----------------------------------------------------------------*/
 
 double distComo(double z, const double a[4]){
-  /* Return the comoving distance of z, given the cosmological 
+  /* Return the comoving distance of z, given the cosmological
    * parameters a. */
-  
+
   int n = 1000;
   gsl_integration_workspace *w = gsl_integration_workspace_alloc (n);
-  
+
   gsl_function F;
   F.function = &drdz;
   F.params   = (void *)a;
 
   double result, error;
-  gsl_integration_qag(&F, 0.0, z, 0, 1e-7, n, 6, w, &result, &error); 
+  gsl_integration_qag(&F, 0.0, z, 0, 1e-7, n, 6, w, &result, &error);
   gsl_integration_workspace_free (w);
-  
+
   return result;
 }
 
@@ -1375,7 +1381,7 @@ double drdz(double x, void * params){
    * a[2] = Omega_L;
    * a[3] = c;
    */
-  
+
   double *a = (double *) params;
   return a[3]/(a[0]*sqrt(a[1]*pow(1+x,3.0)+a[2]));
 }
@@ -1387,25 +1393,25 @@ double dvdz(double z, const double a[4]){
 
 
 double distAngSpher(const double RA1, double DEC1, double RA2, double DEC2){
-  /*Returns the angular distance between points with RA,DEC (in degree) 
+  /*Returns the angular distance between points with RA,DEC (in degree)
    */
-  
+
   double sin2_ra  = 0.5*(1.0 - cos(RA1*PI/180.0)*cos(RA2*PI/180.0)  - sin(RA1*PI/180.0)*sin(RA2*PI/180.0));
   double sin2_dec = 0.5*(1.0 - cos(DEC1*PI/180.0)*cos(DEC2*PI/180.0)- sin(DEC1*PI/180.0)*sin(DEC2*PI/180.0));
-  
+
   return 2.0*asin(sqrt(MAX(EPS/100.0, sin2_dec + cos(DEC1*PI/180.0)*cos(DEC2*PI/180.0)*sin2_ra)))*180.0/PI;
-  
+
 }
 
 void rotate(double x0, double y0, double x, double y, double *xrot, double *yrot, double angle, int spherical){
   /* Takes positions (in degree if spherical = 1) and returns the rotated coordinates. */
-  
+
   if(spherical){
     double sign  = x - x0 < 0.0 ? -1.0 : 1.0;
     *yrot = -sign*(distAngSpher(x0, y0, x, y0))*sin(angle) + (y-y0)*cos(angle)+y0;
     *xrot =  sign*(distAngSpher(x0, y0, x, y0))*cos(angle) + (y-y0)*sin(angle)+x0;
     *xrot =  2.0*asin(sin((*xrot-x0)*PI/180.0/2.0)/cos(*yrot*PI/180.0))*180.0/PI+x0;
-    
+
   }else{
     *xrot = +(x-x0)*cos(angle) - (y-y0)*sin(angle)+x0;
     *yrot =  (x-x0)*sin(angle) + (y-y0)*cos(angle)+y0;
@@ -1416,21 +1422,21 @@ void rotate(double x0, double y0, double x, double y, double *xrot, double *yrot
 gsl_rng *randomInitialize(size_t seed){
   /*Random number generator.
     Define here which type of random generator you want*/
-  
+
   const gsl_rng_type *T;
   gsl_rng *r;
   gsl_rng_env_setup();
   T = gsl_rng_default;
   r = gsl_rng_alloc(T);
   gsl_rng_set (r,seed);
-  
+
   return r;
 }
 
 double determineMachineEpsilon()
 {
   double u, den;
-  
+
   u = 1.0;
   do {
     u /= 2.0;
@@ -1450,30 +1456,30 @@ size_t determineSize_tError(){
 
 FILE *fopenAndCheck(const char *fileName,char *mode){
   /*Checks if fileName exists and opens it. Exits otherwise.;*/
-  
+
   if(!(strcmp(mode,"w")) && !(strcmp(fileName,""))){
     return stdout;
   }
   if(!(strcmp(mode,"r")) && !(strcmp(fileName,"-"))){
     return stdin;
-  } 
-  
+  }
+
   FILE *fileTmp = fopen(fileName,mode);
-  
+
   if (fileTmp == NULL){
     fprintf(stderr,"%s: %s not found. Exiting...\n",MYNAME,fileName);
-    exit(EXIT_FAILURE);    
+    exit(EXIT_FAILURE);
   }
   return fileTmp;
 }
 
 int getStrings(char *line, char *strings, char *delimit, size_t *N){
-  /*Extract each word/number in line separated by delimit and returns 
+  /*Extract each word/number in line separated by delimit and returns
     the array of items in strings.*/
   int i,j,begin,length;
-  
+
   if(line == NULL || line[0] == '\n' || line[0] == '#' || line[0] == '\0') return 0;
-  
+
   i = 0;
   j = 0;
   while(line[i] != '\0' && line[i] != '#' && line[i] != '\n'){
@@ -1488,7 +1494,7 @@ int getStrings(char *line, char *strings, char *delimit, size_t *N){
       j++;
     }
   }
- 
+
   (*N) = j;
 
   if(*N > 0){
@@ -1509,9 +1515,9 @@ void printCount(const size_t *count, const size_t *total, const size_t step){
 
 int checkFileExt(const char *s1, const char *s2){
   /*Checks if s2 matches s1 extension*/
-  
+
   int ext = strlen(s1) - strlen(s2);
-  
+
   if(strcmp(s1+ext, s2) == 0){
     return 1;
   }else{
@@ -1521,16 +1527,16 @@ int checkFileExt(const char *s1, const char *s2){
 
 int roundToNi(double a){
   /*round a to the next integer*/
-  return (int)round(a);  
+  return (int)round(a);
 }
 
 int compareDoubles(const void *a,const void *b){
   /* Compares two double precision numbers*/
-  if (*(double *)a > *(double *)b) 
+  if (*(double *)a > *(double *)b)
     return 1;
-  else if (*(double *)a < *(double *)b) 
+  else if (*(double *)a < *(double *)b)
     return -1;
-  else 
+  else
     return 0;
 }
 
