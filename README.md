@@ -22,7 +22,7 @@ If the input mask is in DS9 `.reg` format, the following region types are accept
 
 ## Installation
 
-To compile it, you need to install the gsl and cfitsio libraries (http://www.gnu.org/software/gsl/, http://heasarc.gsfc.nasa.gov/fitsio/) and edit the Makefile to change the path where gsl and cfitsio is located on your machine (default: /usr/local).
+To compile it, you need to install the gsl and cfitsio libraries (http://www.gnu.org/software/gsl/, http://heasarc.gsfc.nasa.gov/fitsio/) and edit the Makefile to change the path where gsl and cfitsio is located on your machine (default: `/usr/local`).
 
 Then run:
 ```shell
@@ -70,7 +70,7 @@ IMPORTANT NOTICES:
 
 ## Options
 
-### 1. Creates a pixelized mask
+### 1. Create a pixelized mask
 
 ```shell
 $ venice -m mask[.reg,.fits] [OPTIONS]
@@ -111,11 +111,11 @@ The result in pixel_mask.out will look like this:
 0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0
 ```
 
-### 2. Finds objects inside/outside a mask
+### 2. Find objects inside/outside a mask
 
 For ds9-type masks, `venice` determines if a point is inside a polygon by drawing a line between a point and a second point (outside the polygon) and count how many times the line crosses the sides of the polygon. If the number is odd, the object is inside, if the number is even, the point is outside (Press et al 2007, Numerical recipes in c++).
 
-In order to improve the speed, the process is made in 2 times. A first quick check is performed to know if the point is inside or outside the square drawn by the extrema of the polygon (less time consuming) and then the above test is made.
+In order to improve the speed, the process is made in 2 steps. A first quick check is performed to know if the point is inside or outside the square drawn by the extrema of the polygon (less time consuming) and then the above test is made.
 
 This is fast. The only limitation is that all mask entries (`polygon`,`box`,`circle`,`ellipse`) are converted into polygons and stored in memory as a binary tree. A very big mask file (> 10^5 entries) will take a significant amount of memory.
 
@@ -127,9 +127,9 @@ One must provide a catalogue of objects with the same coordinate system as the m
 $ venice -m mask[.reg,.fits] -cat file.cat [OPTIONS]
 ```
 
-The program checks if the objects in the catalogue are inside or outside the mask. The output file contains the initial catalogue with an additionnal column for the mask flag: the flag is 0 when the object is inside the mask and 1 when outside.
+The program checks if the objects in the catalogue are inside or outside the mask.
 
-NOTE: in case of a fits file, the "-f" option is automatically set to "all" and the value of the pixel is given at the end of the line. Objects outside the mask limits are set to -99. A simple way to select objects with the desired pixel value (here "0") is to write:
+If `-f all` is set, the output file contains the initial catalogue with an additionnal column for the mask flag: the flag is 0 when the object is inside the mask and 1 when outside. In case of a fits file, the `-f` option is automatically set to `all` and the value of the pixel is given at the end of the line. Objects outside the mask limits are set to -99. A simple way to select objects with the desired pixel value (here "0") is to write:
 
 ```shell
 $ venice -m mask.fits -cat old.cat | awk '$NF == 0 {print $0}' > new.cat
@@ -154,7 +154,7 @@ and a catalogue oldcat.cat for which the coordinate column numbers are
 $ venice -m mask[.reg,.fits] -cat oldcat.cat -xcol 4 -ycol 5 -o newcat.cat
 ```
 
-### 3. Generates a random catalogue of objects inside/outside a mask
+### 3. Generate a random catalogue of objects inside/outside a mask
 
 Given a mask file, the program generates a random catalogue and flag the objects if inside or outside the mask. The coordinates are drawn from a uniform distribution.
 
@@ -162,7 +162,7 @@ Given a mask file, the program generates a random catalogue and flag the objects
 $ venice -m mask[.reg,.fits] -r [OPTIONS]
 ```
 
-NOTE: in case of a fits file, the "-f" option is automatically set to "all" and the value of the pixel is given at the end of the line. A way to select objects with the desired pixel value (here "0") is to write:
+If `-f all` is set, the output file contains the initial catalogue with an additionnal column for the mask flag: the flag is 0 when the object is inside the mask and 1 when outside. In case of a fits file, the `-f` option is automatically set to `all` and the value of the pixel is given at the end of the line. Objects outside the mask limits are set to -99. A simple way to select objects with the desired pixel value (here "0") is to write:
 
 ```shell
 $ venice -m mask.fits -r | awk '$NF == 0 {print $0}' > random.cat
