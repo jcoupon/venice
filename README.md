@@ -5,13 +5,18 @@ Author: Jean Coupon.
 ## Description
 
 `venice` is a mask utility program that reads a mask file (DS9 or fits type) and a catalogue of objects and computes one of the following tasks:
+
 1. Creates a pixelized mask.
 2. Finds objects inside/outside a mask.
 3. Generates a random catalogue of objects inside/outside a mask.
 
-The program reads the mask file and checks if a point, giving its coordinates, is inside or outside the mask, i.e. inside or outside at least one polygon of the mask. The method used to determine if a point is inside a polygon is to draw a line between the point and a second point (outside the polygon) and count how many times the line crosses the sides of the polygon. If the number is odd, the object is inside, if the number is even, the point is outside.
+The program reads the mask file and checks if a point, giving its coordinates, is inside or outside the mask, i.e. inside or outside at least one polygon of the mask. The method used to determine if a point is inside a polygon is to draw a line between the point and a second point (outside the polygon) and count how many times the line crosses the sides of the polygon. If the number is odd, the object is inside, if the number is even, the point is outside (Press et al 2007, Numerical recipes in c++).
 
-Ref: Press et al 2007, Numerical recipes in c++
+If the input mask is in DS9 `.reg` format, the following region types are accepted:
+- `polygon`
+- `box`
+- `circle`
+- `ellipse`
 
 In order to improve the speed, the process is made in 2 times. A first quick check is performed to know if the point is inside or outside the square drawn by the extrema of the polygon (less time consuming) and then the "cross line" test is made.
 
@@ -80,13 +85,13 @@ For this task, don't add a catalogue in input (If you add a catalogue in input, 
 - 1 when the center of the pixel is outside the mask.
 
 Command-line options:
-`-nx number`: number of pixels in the x direction. Default = 512.
-`-ny number`: number of pixels in the y direction. Default = 512.
-`-o outputfile`: output file where the pixelized mask is written [Default = mask.out].
-`-xmin value`: the minimum coordinate in the x direction.
-`-xmax value`: the maximum coordinate in the x direction.
-`-ymin value`: the minimum coordinate in the y direction.
-`-ymax value`: the maximum coordinate in the y direction. The default value for the coordinates limits are definied by the mask limits.
+- `-nx number`: number of pixels in the x direction. Default = 512.
+- `-ny number`: number of pixels in the y direction. Default = 512.
+- `-o outputfile`: output file where the pixelized mask is written [Default = mask.out].
+- `-xmin value`: the minimum coordinate in the x direction.
+- `-xmax value`: the maximum coordinate in the x direction.
+- `-ymin value`: the minimum coordinate in the y direction.
+- `-ymax value`: the maximum coordinate in the y direction. The default value for the coordinates limits are definied by the mask limits.
 
 Example:
 How to create a pixelized (10 X 10 pixels) mask with a mask file named mask[.reg,.fits] and put the results in pixel_mask.out:
@@ -127,14 +132,14 @@ $ venice -m mask.fits -cat old.cat | awk '$NF == 0 {print $0}' > new.cat
 ```
 
 Options:
-`-f  [outside,inside,all]`: format of the catalogue. Default = outside. `outside` means only objects OUTSIDE the mask are written in the output file with the format: x y. `inside` means only objects INSIDE the mask are written. `all` means ALL objects are written in the catalogue with a flag 0 or 1 (resp. inside or outside) with the format: `col1 col2 ... flag`.
-`-xcol value`: column number of the x coordinate. Default=1.
-`-ycol value`: column number of the y coordinate. Default=2.
-`-o outputfile`: output file where the catalogue and the flag are written. Default = mask.out.
-`-xmin value`: the minimum coordinate in the x direction.
-`-xmax value`: the maximum coordinate in the x direction.
-`-ymin value`: the minimum coordinate in the y direction.
-`-ymax value`: the maximum coordinate in the y direction.
+- `-f  [outside,inside,all]`: format of the catalogue. Default = outside. `outside` means only objects OUTSIDE the mask are written in the output file with the format: x y. `inside` means only objects INSIDE the mask are written. `all` means ALL objects are written in the catalogue with a flag 0 or 1 (resp. inside or outside) with the format: `col1 col2 ... flag`.
+- `-xcol value`: column number of the x coordinate. Default=1.
+- `-ycol value`: column number of the y coordinate. Default=2.
+- `-o outputfile`: output file where the catalogue and the flag are written. Default = mask.out.
+- `-xmin value`: the minimum coordinate in the x direction.
+- `-xmax value`: the maximum coordinate in the x direction.
+- `-ymin value`: the minimum coordinate in the y direction.
+- `-ymax value`: the maximum coordinate in the y direction.
 
 Example:
 How to create a new catalogue newcat.cat with a mask file named mask[.reg,.fits]
@@ -160,20 +165,20 @@ $ venice -m mask.fits -r | awk '$NF == 0 {print $0}' > random.cat
 ```
 
 Options:
-`-coord`: cart or spher. spher allows to draw a uniform distribution on a sphere. The coordinates must be in degrees, ra=[0:360],dec=[-90.0:90.0]. Default = cart.
-`-o outputfile`: output file where the catalogue is written. Default = mask.out.
-`-npart number`: number of objects. Default = 1 000 000.
-`-f  [outside,inside,all]`, format of the catalogue. Default = outside. `outside` means only objects OUTSIDE the mask are written in the output file with the format: x y. `inside` means only objects INSIDE the mask are written. `all` means ALL objects are written in the catalogue with a flag 0 or 1 (resp. inside or outside) with the format: `col1 col2 ... flag`.
-`-xcol value`: column number of the x coordinate. Default=1.
-`-ycol value`: column number of the y coordinate. Default=2.
-`-o outputfile`: output file where the catalogue and the flag are written. Default = mask.out.
-`-xmin value`: the minimum coordinate in the x direction.
-`-xmax value`: the maximum coordinate in the x direction.
-`-ymin value`: the minimum coordinate in the y direction.
-`-ymax value`: the maximum coordinate in the y direction.
-`-seed value`: (must be > 0), the seed for the GSL random generator (default: 20091982)
-`-nz file_nz`: to provide a file with the redshift distribution from which the random objects will be drawn. Note: if the binning is too small, this will "kill" the large scale power along the line of sight direction
-`-z zmin,zmax`: to have the random point number follow the volume size between zmin and zmax. This garantee a constant density as function of redshift. If the data sample is volume limited, this is the right option to use (instead of `-nz`).
+- `-coord`: cart or spher. spher allows to draw a uniform distribution on a sphere. The coordinates must be in degrees, ra=[0:360],dec=[-90.0:90.0]. Default = cart.
+- `-o outputfile`: output file where the catalogue is written. Default = mask.out.
+- `-npart number`: number of objects. Default = 1 000 000.
+- `-f  [outside,inside,all]`, format of the catalogue. Default = outside. `outside` means only objects OUTSIDE the mask are written in the output file with the format: x y. `inside` means only objects INSIDE the mask are written. `all` means ALL objects are written in the catalogue with a flag 0 or 1 (resp. inside or outside) with the format: `col1 col2 ... flag`.
+- `-xcol value`: column number of the x coordinate. Default=1.
+- `-ycol value`: column number of the y coordinate. Default=2.
+- `-o outputfile`: output file where the catalogue and the flag are written. Default = mask.out.
+- `-xmin value`: the minimum coordinate in the x direction.
+- `-xmax value`: the maximum coordinate in the x direction.
+- `-ymin value`: the minimum coordinate in the y direction.
+- `-ymax value`: the maximum coordinate in the y direction.
+- `-seed value`: (must be > 0), the seed for the GSL random generator (default: 20091982)
+- `-nz file_nz`: to provide a file with the redshift distribution from which the random objects will be drawn. Note: if the binning is too small, this will "kill" the large scale power along the line of sight direction
+- `-z zmin,zmax`: to have the random point number follow the volume size between zmin and zmax. This garantee a constant density as function of redshift. If the data sample is volume limited, this is the right option to use (instead of `-nz`).
 
 The default value for the coordinates limits are definied by the mask limits. If you don't provide a mask (so if you only want a random catalogue with no mask), you have to define all of these values.
 
