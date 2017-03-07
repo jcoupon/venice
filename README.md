@@ -10,7 +10,7 @@ Author: Jean Coupon.
 2. find objects inside/outside a mask,
 3. or generate a random catalogue of objects inside/outside a mask.
 
-The program reads the mask file and checks if a point, giving its coordinates, is inside or outside the mask, i.e. inside or outside at least one polygon of the mask. The method used to determine if a point is inside a polygon is to draw a line between the point and a second point (outside the polygon) and count how many times the line crosses the sides of the polygon. If the number is odd, the object is inside, if the number is even, the point is outside (Press et al 2007, Numerical recipes in c++).
+The program reads the mask file and checks if a point, giving its coordinates, is inside or outside the mask, i.e. inside or outside at least one polygon of the mask.
 
 If the input mask is in DS9 `.reg` format, the following region types are accepted:
 - `polygon`
@@ -18,11 +18,7 @@ If the input mask is in DS9 `.reg` format, the following region types are accept
 - `circle`
 - `ellipse`
 
-In order to improve the speed, the process is made in 2 times. A first quick check is performed to know if the point is inside or outside the square drawn by the extrema of the polygon (less time consuming) and then the "cross line" test is made.
-
-The typical time for a CFHTLS wide catalogue and its terapix mask is about 5 seconds (200 000 objects in the catalogue and 1000 polygons in the mask).
-
-For all the program, the convention used is 0 when the object is INSIDE the mask and 1 when the object is OUTSIDE.
+The convention used is `0` when the object is INSIDE the mask and `1` when the object is OUTSIDE.
 
 ## Installation
 
@@ -117,7 +113,13 @@ The result in pixel_mask.out will look like this:
 
 ### 2. Finds objects inside/outside a mask
 
-You have to provide a catalogue of objects with the same coordinate system as the mask file:
+The method used to determine if a point is inside a polygon is to draw a line between the point and a second point (outside the polygon) and count how many times the line crosses the sides of the polygon. If the number is odd, the object is inside, if the number is even, the point is outside (Press et al 2007, Numerical recipes in c++).
+
+In order to improve the speed, the process is made in 2 times. A first quick check is performed to know if the point is inside or outside the square drawn by the extrema of the polygon (less time consuming) and then the "cross line" test is made.
+
+The typical time for a CFHTLS wide catalogue and its terapix mask is about 5 seconds (200 000 objects in the catalogue and 1000 polygons in the mask).
+
+One must provide a catalogue of objects with the same coordinate system as the mask file:
 
 ```shell
 $ venice -m mask[.reg,.fits] -cat file.cat [OPTIONS]
