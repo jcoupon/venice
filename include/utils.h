@@ -60,6 +60,8 @@
 #define SWAP(a,b) {swap = (a); (a) = (b); (b) = swap;}
 #define SQUARE(a) ((a)*(a))
 
+#define FILENAMESIZE 1000
+
 #define NFIELD    500
 #define NCHAR     20
 #define NVERTICES 100
@@ -163,11 +165,5 @@ int checkFileExt(const char *s1, const char *s2);
 int roundToNi(double a);
 int compareDoubles(const void *a,const void *b);
 
-
-double convertCHAR(void *table, long i);
-double convertSHORT(void *table, long i);
-double convertLONG(void *table, long i);
-double convertFLOAT(void *table, long i);
-double convertDOUBLE(void *table, long i);
 
 #endif

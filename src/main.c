@@ -301,6 +301,8 @@ int flagCat(const Config *para){
    return(EXIT_SUCCESS);
 }
 
+
+
 int randomCat(const Config *para){
    /*    Generates a random catalogue inside the mask (uniform PDF).
     *    If "all", it puts all objects and add a flag such as:
@@ -308,29 +310,27 @@ int randomCat(const Config *para){
     *    outside the mask.
     */
 
-   int Npolys,poly_id,flag, verbose = 1;
+   int Npolys,poly_id,flag, verbose = 1, status = 0;
+   long firstrow =1, firstelem = 1;
+
    size_t i, npart;
    double x[2], x0[2], xmin[2], xmax[2], z, area;
    gsl_rng *r = randomInitialize(para->seed);
 
-   FILE *fileOut = fopenAndCheck(para->fileOutName,"w");
+   FILE *fileOut;             /* pointer to the ascii file */
+   fitsfile *fileOutFits;     /* pointer to the FITS file, defined in fitsio.h */
 
-   /*    load redshift distribution */
-   /*    GSL convention: bin[i] corresponds to range[i] <= x < range[i+1] */
+
+   /*    redshift distribution
+    *    GSL convention: bin[i] corresponds to range[i] <= x < range[i+1]
+    */
+
    FILE *fileNofZ;
    size_t Nbins, Ncol;
    char line[NFIELD*NCHAR], item[NFIELD*NCHAR];
 
    gsl_histogram *nz;
    gsl_histogram_pdf *nz_PDF;
-
-   /* DEBUGGING
-   for(i=0;i<2000;i++){
-   z = (double)i/1000.0;
-   printf("%f %f %f\n",z,dvdz(z,para->a),distComo(z,para->a)*distComo(z,para->a)*distComo(z,para->a));
-   }
-   exit(-1);
-   */
 
    if(para->nz){
       fileNofZ = fopenAndCheck(para->fileNofZName,"r");
@@ -351,7 +351,7 @@ int randomCat(const Config *para){
             i++;
          }
       }
-      /*    gsl structure requires an upper limit for the last bin*/
+      /*    gsl structure requires an upper limit for the last bin */
       nz->range[i]   = 100.0;
       gsl_histogram_pdf_init (nz_PDF, nz);
    }
@@ -372,6 +372,9 @@ int randomCat(const Config *para){
       gsl_histogram_pdf_init (nz_PDF, nz);
    }
 
+   /*
+    * input mask is a fits image
+    */
    if(checkFileExt(para->fileRegInName,".fits")){
       if(para->coordType != CART){
          fprintf(stderr,"%s: fits file detected. coord should be set to cart for image coordinates. Exiting...\n",MYNAME);
@@ -379,41 +382,99 @@ int randomCat(const Config *para){
       }
 
       long fpixel[2], naxes[2];
-      int bitpix, status = 0;
+      int bitpix;
       double (*convert)(void *,long ) = NULL;
 
       /*    read fits file and put in table */
-      void *table = readFits(para,&bitpix,&status,naxes,&convert);
+      void *table = readFits(para, &bitpix, &status, naxes, &convert);
 
       /*    define limits */
-      xmin[0] = xmin[1] = 1.0;
-      xmax[0] = naxes[0];
-      xmax[1] = naxes[1];
+      xmin[0] = xmin[1] = 0.5;
+      xmax[0] = naxes[0]+0.5;
+      xmax[1] = naxes[1]+0.5;
       if(para->minDefinied[0]) xmin[0] = para->min[0];
       if(para->maxDefinied[0]) xmax[0] = para->max[0];
       if(para->minDefinied[1]) xmin[1] = para->min[1];
       if(para->maxDefinied[1]) xmax[1] = para->max[1];
+
       /*    print out limits */
       fprintf(stderr,"limits:\n");
       fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
 
-      /*    ATTENTION "convert" converts everything into double */
-      fprintf(stderr,"\nProgress =     ");
-      for(i=0;i<para->npart;i++){
-         printCount(&i,&para->npart,1000);
-         x[0] = gsl_ran_flat(r,xmin[0],xmax[0]);
-         x[1] = gsl_ran_flat(r,xmin[1],xmax[1]);
-         fpixel[0] = roundToNi(x[0]) - 1;
-         fpixel[1] = roundToNi(x[1]) - 1;
-         if(para->nz || para->zrange){
-            z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
-            fprintf(fileOut,"%f %f %g %f\n", x[0], x[1], convert(table,fpixel[1]*naxes[0]+fpixel[0]), z);
-         }else{
-            fprintf(fileOut,"%f %f %g\n", x[0], x[1], convert(table,fpixel[1]*naxes[0]+fpixel[0]));
+      // printf("\nbitpix = %d\n", bitpix);
+
+
+      // printf("bitpix = %d\n", bitpix);
+
+      // exit(-1);
+
+
+      if(para->oFileType == FITS){
+         /*    define the name, datatype, and physical units for the columns */
+         int tfields   = 3;   /* table will have 3 columns */
+         char *ttype[] = { "x", "y", "flag" };
+         char *tform[] = { "1D", "1D", getFormatFromImageType_string(bitpix)};
+         char *tunit[] = { "pix", "pix", "\0" };
+
+         int TFORM = getFormatFromImageType_number(bitpix);
+
+         fits_create_file(&fileOutFits, para->fileOutName, &status);
+   		if (status) fits_report_error(stderr, status);
+
+         fits_create_tbl(fileOutFits, BINARY_TBL, 0, tfields, ttype, tform, tunit, "DATA", &status);
+
+      	short *result = (short *)table;
+
+
+
+         fprintf(stderr,"\nProgress =     ");
+         for(i=0;i<para->npart;i++){
+            printCount(&i,&para->npart, 1000);
+            x[0] = gsl_ran_flat(r,xmin[0],xmax[0]);
+            x[1] = gsl_ran_flat(r,xmin[1],xmax[1]);
+            fpixel[0] = roundToNi(x[0]) - 1;
+            fpixel[1] = roundToNi(x[1]) - 1;
+            if(para->nz || para->zrange){
+               // z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
+               // fprintf(fileOut,"%f %f %g %f\n", x[0], x[1], convert(table,fpixel[1]*naxes[0]+fpixel[0]), z);
+            }else{
+               fits_write_col(fileOutFits, TDOUBLE, 1, firstrow+i, firstelem, 1, &(x[0]), &status);
+               fits_write_col(fileOutFits, TDOUBLE, 2, firstrow+i, firstelem, 1, &(x[1]), &status);
+               fits_write_col(fileOutFits, TFORM, 3, firstrow+i, firstelem, 1, &(result[fpixel[1]*naxes[0]+fpixel[0]]), &status);
+      		   if (status) fits_report_error(stderr, status);
+            }
+         }
+
+
+      }else{
+         fileOut = fopenAndCheck(para->fileOutName,"w");
+         /*    ATTENTION "convert" converts everything into double */
+         fprintf(stderr,"\nProgress =     ");
+         for(i=0;i<para->npart;i++){
+            printCount(&i,&para->npart,1000);
+            x[0] = gsl_ran_flat(r,xmin[0],xmax[0]);
+            x[1] = gsl_ran_flat(r,xmin[1],xmax[1]);
+            fpixel[0] = roundToNi(x[0]) - 1;
+            fpixel[1] = roundToNi(x[1]) - 1;
+            if(para->nz || para->zrange){
+               z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
+               fprintf(fileOut,"%f %f %g %f\n", x[0], x[1], convert(table,fpixel[1]*naxes[0]+fpixel[0]), z);
+            }else{
+               fprintf(fileOut,"%f %f %g\n", x[0], x[1], convert(table,fpixel[1]*naxes[0]+fpixel[0]));
+            }
          }
       }
-      fprintf(stderr,"\b\b\b\b100%%\n");
 
+
+
+
+
+
+
+
+
+
+      fprintf(stderr,"\b\b\b\b100%%\n");
       free(table);
 
    }else if(checkFileExt(para->fileRegInName,".reg")){
@@ -549,6 +610,12 @@ int randomCat(const Config *para){
       gsl_histogram_free (nz);
    }
 
-   fclose(fileOut);
+   if(para->oFileType == FITS){
+   	fits_close_file(fileOutFits, &status);
+   	if (status) fits_report_error(stderr, status);
+   }else{
+      fclose(fileOut);
+   }
+
    return(EXIT_SUCCESS);
 }

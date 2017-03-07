@@ -56,7 +56,7 @@ int readParameters(int argc, char **argv, Config *para){
 		/*		help */
 		if(!strcmp(argv[i],"-h") || !strcmp(argv[i],"--help") || argc == 1){
 			fprintf(stderr,"\n\n                   V E N I C E\n\n");
-			fprintf(stderr,"           mask utility program version 3.9.1 \n\n");
+			fprintf(stderr,"           mask utility program version 4.0.0 \n\n");
 			fprintf(stderr,"Usage: %s -m mask.[reg,fits]               [OPTIONS] -> binary mask for visualization\n",argv[0]);
 			fprintf(stderr,"    or %s -m mask.[reg,fits] -cat file.cat [OPTIONS] -> objects in/out of mask\n",argv[0]);
 			fprintf(stderr,"    or %s -m mask.[reg,fits] -cat -        [OPTIONS] -> objects in/out of mask (from stdin)\n",argv[0]);
@@ -288,16 +288,20 @@ int readParameters(int argc, char **argv, Config *para){
 	}
 
 
-   if(checkFileExt(para->fileCatInName,".fits")){
-		para->catFileType = FITS;
-   }else{
+	/*		if input file ends with .ascii or .cat set ascii format */
+   if(checkFileExt(para->fileCatInName,".ascii") || checkFileExt(para->fileCatInName,".cat")){
 		para->catFileType = ASCII;
-	}
-   if(checkFileExt(para->fileOutName,".fits")){
-		para->oFileType = FITS;
-   }else{
+   }
+	/*		if output file ends with .ascii or .cat set ascii format  */
+   if(checkFileExt(para->fileOutName,".ascii") || checkFileExt(para->fileOutName,".cat")){
 		para->oFileType = ASCII;
+   }
+
+	/* 	stdout if no output file given */
+	if( !strcmp(para->fileOutName, "\0")){
+		strcpy(para->fileOutName,"-");
 	}
+
 
 	return task;
 }

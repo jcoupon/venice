@@ -1,5 +1,10 @@
 Version history
 
+v 4.0.0 - March 2017
+- files split in more standardised way
+- updated the doc
+- added fits support for input and ouput catalogues
+
 v 3.9.1 - May 2015
 - now saves the inputFile header (if any) in flagCat
 

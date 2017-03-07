@@ -588,10 +588,10 @@ size_t determineSize_tError(){
 FILE *fopenAndCheck(const char *fileName,char *mode){
 	/*		Checks if fileName exists and opens it. Exits otherwise.;	*/
 
-	if(!(strcmp(mode,"w")) && !(strcmp(fileName,""))){
+	if (  !(strcmp(mode,"w")) && (!(strcmp(fileName,"")) || !(strcmp(fileName,"-")))){
 		return stdout;
 	}
-	if(!(strcmp(mode,"r")) && !(strcmp(fileName,"-"))){
+	if (  !(strcmp(mode,"r")) && (!(strcmp(fileName,"")) || !(strcmp(fileName,"-")))){
 		return stdin;
 	}
 
@@ -648,14 +648,26 @@ void printCount(const size_t *count, const size_t *total, const size_t step){
 int checkFileExt(const char *s1, const char *s2){
 	/*		Checks if s2 matches s1 extension */
 
-	int ext = strlen(s1) - strlen(s2);
 
-	if(strcmp(s1+ext, s2) == 0){
+	char *filterPtr = NULL;
+	char s1Tmp[FILENAMESIZE];
+
+	strcpy(s1Tmp, s1);
+
+	/* 	look for filter string and remove it */
+	filterPtr = strstr(s1Tmp, "[");
+	if (filterPtr != NULL){
+		*filterPtr = '\0';
+	}
+
+	int ext = strlen(s1Tmp) - strlen(s2);
+	if(strcmp(s1Tmp+ext, s2) == 0){
 		return 1;
 	}else{
 		return 0;
 	}
 }
+
 
 int roundToNi(double a){
 	/*		round a to the next integer */
@@ -670,25 +682,4 @@ int compareDoubles(const void *a,const void *b){
 	return -1;
 	else
 	return 0;
-}
-
-double convertCHAR(void *table, long i){
-	char *result = (char *)table;
-	return (double)(result[i]);
-}
-double convertSHORT(void *table, long i){
-	short *result = (short *)table;
-	return (double)(result[i]);
-}
-double convertLONG(void *table, long i){
-	long *result = (long *)table;
-	return (double)(result[i]);
-}
-double convertFLOAT(void *table, long i){
-	float *result = (float *)table;
-	return (double)(result[i]);
-}
-double convertDOUBLE(void *table, long i){
-	double *result = (double *)table;
-	return result[i];
 }

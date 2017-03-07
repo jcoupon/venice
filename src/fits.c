@@ -82,3 +82,84 @@ void *readFits(const Config *para, int *bitpix, int *status, long naxes[2], doub
 
   return result;
 }
+
+
+
+double convertCHAR(void *table, long i){
+	char *result = (char *)table;
+	return (double)(result[i]);
+}
+double convertSHORT(void *table, long i){
+	short *result = (short *)table;
+	return (double)(result[i]);
+}
+double convertLONG(void *table, long i){
+	long *result = (long *)table;
+	return (double)(result[i]);
+}
+double convertFLOAT(void *table, long i){
+	float *result = (float *)table;
+	return (double)(result[i]);
+}
+double convertDOUBLE(void *table, long i){
+	double *result = (double *)table;
+	return result[i];
+}
+
+
+
+char *getFormatFromImageType_string(int bitpix){
+	/* 	Takes bitpix form image and convert into TFORM value */
+
+	switch (bitpix){
+		case BYTE_IMG:
+			return "1B";
+			break;
+		case SHORT_IMG:
+			return "1I";
+			break;
+		case LONG_IMG:
+			return "1K";
+			break;
+		case FLOAT_IMG:
+			return "1E";
+			break;
+		case DOUBLE_IMG:
+			return "1D";
+			break;
+		default:
+		fprintf(stderr,"NULL) \n%s: fits format not recognized. Exiting...\n",MYNAME);
+		exit(EXIT_FAILURE);
+	}
+
+	return "\0";
+}
+
+
+
+int getFormatFromImageType_number(int bitpix){
+	/* 	Takes bitpix form image and convert into TFORM value */
+
+	switch (bitpix){
+		case BYTE_IMG:
+			return TBYTE;
+			break;
+		case SHORT_IMG:
+			return TSHORT;
+			break;
+		case LONG_IMG:
+			return TLONGLONG;
+			break;
+		case FLOAT_IMG:
+			return TFLOAT;
+			break;
+		case DOUBLE_IMG:
+			return TDOUBLE;
+			break;
+		default:
+		fprintf(stderr,"NULL) \n%s: fits format not recognized. Exiting...\n",MYNAME);
+		exit(EXIT_FAILURE);
+	}
+
+	return 0;
+}

@@ -40,7 +40,7 @@ simply edit Makefile or type (only tested with gcc and icc):
 $ make CC=my_favorite_compiler
 ```
 
-WARNING: venice without fits library is no longer supported (you must install the cfitsio library).
+**WARNING: venice without fits library is no longer supported (you must install the cfitsio library).**
 
 ## Usage
 
