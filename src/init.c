@@ -29,6 +29,8 @@ int readParameters(int argc, char **argv, Config *para){
 	para->constDen  = 0;
 	para->nz        = 0;
 	para->zrange    = 0;
+	para->catFileType = FITS;
+	para->oFileType = FITS;
 
 	/* 	default cosmology <=> WMAP5 */
 	/*		TODO: add it as an option */
@@ -36,7 +38,6 @@ int readParameters(int argc, char **argv, Config *para){
 	para->a[1] = Omega_M;
 	para->a[2] = Omega_L;
 	para->a[3] = c;
-
 
 	for(i=0;i<2;i++){
 		para->minDefinied[i] = 0;
@@ -61,7 +62,11 @@ int readParameters(int argc, char **argv, Config *para){
 			fprintf(stderr,"    or %s -m mask.[reg,fits] -cat -        [OPTIONS] -> objects in/out of mask (from stdin)\n",argv[0]);
 			fprintf(stderr,"    or %s -m mask.[reg,fits] -r            [OPTIONS] -> random catalogue\n\n",argv[0]);
 			fprintf(stderr,"Options:\n");
+			fprintf(stderr,"    -r                       create random catalogue\n");
+			fprintf(stderr,"    -cat FILE                input catalogue file name, default:stdin\n");
 			fprintf(stderr,"    -o FILE                  output file name, default:stdout\n");
+			fprintf(stderr,"    -catfmt [ascii,fits]     input catalogue format, default:fits if stdin\n");
+			fprintf(stderr,"    -ofmt [ascii,fits]       output file format, default:fits if stdout\n");
 			fprintf(stderr,"    -f [outside,inside,all]  output format, default:outside\n");
 			fprintf(stderr,"    -[x,y]col N              column id for x and y (starts at 1)\n");
 			fprintf(stderr,"    -coord [cart,spher]      coordinate type, default:cart\n");
@@ -240,6 +245,24 @@ int readParameters(int argc, char **argv, Config *para){
 			}
 			if(atoi(argv[i+1]) > 0) para->seed = atoi(argv[i+1]);
 		}
+
+		/* 	input file type */
+		if(!strcmp(argv[i],"-catfmt")) {
+			if(!strcmp(argv[i+1],"ascii")){
+				para->catFileType = ASCII;
+			}else if(!strcmp(argv[i+1],"fits")) {
+				para->catFileType = FITS;
+			}
+		}
+
+		/* 	output file type */
+		if(!strcmp(argv[i],"-ofmt")) {
+			if(!strcmp(argv[i+1],"ascii")){
+				para->oFileType = ASCII;
+			}else if(!strcmp(argv[i+1],"fits")) {
+				para->oFileType = FITS;
+			}
+		}
 	}
 	/* 	if no mask file is provided */
 	if (nomask){
@@ -262,6 +285,18 @@ int readParameters(int argc, char **argv, Config *para){
 			fprintf(stderr,"    or %s -m mask.reg -r            [OPTIONS]\n",argv[0]);
 			exit(EXIT_FAILURE);
 		}
+	}
+
+
+   if(checkFileExt(para->fileCatInName,".fits")){
+		para->catFileType = FITS;
+   }else{
+		para->catFileType = ASCII;
+	}
+   if(checkFileExt(para->fileOutName,".fits")){
+		para->oFileType = FITS;
+   }else{
+		para->oFileType = ASCII;
 	}
 
 	return task;

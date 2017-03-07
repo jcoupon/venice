@@ -36,14 +36,14 @@ int main(int argc, char **argv)
    /*    tasks */
    switch (readParameters(argc,argv,&para)){
       case 1:
-      mask2d(&para);     /* binary mask for visualization */
-      break;
+         mask2d(&para);     /* binary mask for visualization */
+         break;
       case 2:
-      flagCat(&para);    /* objects in/out of mask */
-      break;
+         flagCat(&para);    /* objects in/out of mask */
+         break;
       case 3:
-      randomCat(&para);  /* random catalogue */
-      break;
+         randomCat(&para);  /* random catalogue */
+         break;
    }
    return EXIT_SUCCESS;
 }

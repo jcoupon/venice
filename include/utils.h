@@ -50,6 +50,8 @@
 #define NODE  1
 #define RADEC 0
 #define CART  1
+#define ASCII 0
+#define FITS  1
 
 #define MAX(x,y) ((x) > (y)) ? (x) : (y)
 #define MIN(x,y) ((x) < (y)) ? (x) : (y)
@@ -85,6 +87,8 @@ typedef struct Config
 	double min[2], max[2], zmin, zmax;
 	int minDefinied[2];
 	int maxDefinied[2];
+
+	int catFileType, oFileType;
 
 	/* 	cosmology */
 	double a[4];

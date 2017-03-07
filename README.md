@@ -4,6 +4,9 @@ Author: Jean Coupon.
 
 ## Description
 
+**[NEW]: fits support added for input files (faster reading, names for input columns, and [CFITSIO filters](http://heasarc.gsfc.nasa.gov/docs/software/fitsio/filters.html)). WARNING: the input and output catalogue format is `fits` if read from STDIN OR STDOUT, respectively.**
+
+
 `venice` is a mask utility program that reads a mask file (DS9 or fits type) and a catalogue of objects to:
 
 1. create a pixelized mask,
@@ -45,7 +48,11 @@ Usage: venice -m mask.[reg,fits]               [OPTIONS] -> binary mask for visu
     or venice -m mask.[reg,fits] -r            [OPTIONS] -> random catalogue
 
 Options:
+    -r                       create random catalogue
+    -cat FILE                input catalogue file name, default:stdin
     -o FILE                  output file name, default:stdout
+    -catfmt [ascii,fits]     input catalogue format, default:fits if stdin
+    -ofmt [ascii,fits]       output file format, default:fits if stdout
     -f [outside,inside,all]  output format, default:outside
     -[x,y]col N              column id for x and y (starts at 1)
     -coord [cart,spher]      coordinate type, default:cart
