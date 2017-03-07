@@ -71,10 +71,10 @@ int  mask2d(const Config *para){
    if(checkFileExt(para->fileRegInName,".fits")){           /*     fits file */
       long fpixel[2], naxes[2];
       int bitpix, status = 0;
-      double (*convert)(void *,long ) = NULL;
+      double (*toDouble)(void *,long ) = NULL;
 
       /*   read fits file and put in table */
-      void *table = readFits(para,&bitpix,&status,naxes,&convert);
+      void *table = readFits(para,&bitpix,NULL,NULL,&status,naxes,&toDouble,NULL);
 
       /* define limits */
       xmin[0] = xmin[1] = 1.0;
@@ -90,7 +90,7 @@ int  mask2d(const Config *para){
 
       gsl_histogram2d_set_ranges_uniform(mask,xmin[0],xmax[0],xmin[1],xmax[1]);
 
-      /*    ATTENTION "convert" converts everything into double */
+      /*    ATTENTION "toDouble" converts everything into double */
       fprintf(stderr,"\nProgress =     ");
       for(i=0; i<mask->nx; i++){
          for(j=0; j<mask->ny; j++){
@@ -100,7 +100,7 @@ int  mask2d(const Config *para){
             x[1] = (mask->yrange[j]+mask->yrange[j+1])/2.0;
             fpixel[0] = roundToNi(x[0]) - 1;
             fpixel[1] = roundToNi(x[1]) - 1;
-            mask->bin[i*mask->ny+j] = convert(table,fpixel[1]*naxes[0]+fpixel[0]);
+            mask->bin[i*mask->ny+j] = toDouble(table,fpixel[1]*naxes[0]+fpixel[0]);
          }
       }
       fprintf(stderr,"\b\b\b\b100%%\n");
@@ -195,10 +195,10 @@ int flagCat(const Config *para){
 
       long fpixel[2], naxes[2];
       int bitpix, status = 0;
-      double (*convert)(void *,long ) = NULL;
+      double (*toDouble)(void *,long ) = NULL;
 
       /*    read fits file and put in table */
-      void *table = readFits(para,&bitpix,&status,naxes,&convert);
+      void *table = readFits(para,&bitpix,NULL,NULL,&status,naxes,&toDouble,NULL);
 
       /*    define limits */
       xmin[0] = xmin[1] = 1.0;
@@ -212,7 +212,7 @@ int flagCat(const Config *para){
       fprintf(stderr,"limits:\n");
       fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
 
-      /*    ATTENTION "convert" converts everything into double */
+      /*    ATTENTION "toDouble" converts everything into double */
       i = 0;
       if(verbose) fprintf(stderr,"\nProgress =     ");
       while(fgets(line,NFIELD*NCHAR,fileCatIn) != NULL){
@@ -230,7 +230,7 @@ int flagCat(const Config *para){
             str_end = strstr(line,"\n");/* cariage return to the end of the line */
             strcpy(str_end,"\0");       /* "end" symbol to the line              */
             if(xmin[0] < x[0] && x[0] < xmax[0] && xmin[1] < x[1] && x[1] < xmax[1]){
-               fprintf(fileOut,"%s %g\n",line,convert(table,fpixel[1]*naxes[0]+fpixel[0]));
+               fprintf(fileOut,"%s %g\n",line,toDouble(table,fpixel[1]*naxes[0]+fpixel[0]));
             }else{
                fprintf(fileOut,"%s %d\n",line,-99);
             }
@@ -310,7 +310,7 @@ int randomCat(const Config *para){
     *    outside the mask.
     */
 
-   int Npolys,poly_id,flag, verbose = 1, status = 0;
+   int Npolys,poly_id,flag, verbose = 1, status = 0, size;
    long firstrow =1, firstelem = 1;
 
    size_t i, npart;
@@ -382,11 +382,12 @@ int randomCat(const Config *para){
       }
 
       long fpixel[2], naxes[2];
-      int bitpix;
-      double (*convert)(void *,long ) = NULL;
+      int bitpix, typecode;
+      char tform_char;
+      double (*toDouble)(void *,long ) = NULL;
 
       /*    read fits file and put in table */
-      void *table = readFits(para, &bitpix, &status, naxes, &convert);
+      void *table = readFits(para, &bitpix, &typecode, &tform_char, &status, naxes, &toDouble, &size);
 
       /*    define limits */
       xmin[0] = xmin[1] = 0.5;
@@ -401,31 +402,25 @@ int randomCat(const Config *para){
       fprintf(stderr,"limits:\n");
       fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
 
-      // printf("\nbitpix = %d\n", bitpix);
-
-
-      // printf("bitpix = %d\n", bitpix);
-
-      // exit(-1);
-
-
       if(para->oFileType == FITS){
-         /*    define the name, datatype, and physical units for the columns */
-         int tfields   = 3;   /* table will have 3 columns */
-         char *ttype[] = { "x", "y", "flag" };
-         char *tform[] = { "1D", "1D", getFormatFromImageType_string(bitpix)};
-         char *tunit[] = { "pix", "pix", "\0" };
-
-         int TFORM = getFormatFromImageType_number(bitpix);
 
          fits_create_file(&fileOutFits, para->fileOutName, &status);
    		if (status) fits_report_error(stderr, status);
 
-         fits_create_tbl(fileOutFits, BINARY_TBL, 0, tfields, ttype, tform, tunit, "DATA", &status);
-
-      	short *result = (short *)table;
-
-
+         /*    define the name, datatype, and physical units for the columns */
+         if(para->nz || para->zrange){
+            int tfields   = 4;   /* table will have 3 columns */
+            char *ttype[] = { "x", "y", "flag", "z" };
+            char *tform[] = { "1D", "1D", concat("1", &tform_char), "1D"};
+            char *tunit[] = { "pix", "pix", "\0", "\0" };
+            fits_create_tbl(fileOutFits, BINARY_TBL, 0, tfields, ttype, tform, tunit, "DATA", &status);
+         }else{
+            int tfields   = 3;   /* table will have 3 columns */
+            char *ttype[] = { "x", "y", "flag" };
+            char *tform[] = { "1D", "1D", concat("1", &tform_char)};
+            char *tunit[] = { "pix", "pix", "\0" };
+            fits_create_tbl(fileOutFits, BINARY_TBL, 0, tfields, ttype, tform, tunit, "DATA", &status);
+         }
 
          fprintf(stderr,"\nProgress =     ");
          for(i=0;i<para->npart;i++){
@@ -434,21 +429,19 @@ int randomCat(const Config *para){
             x[1] = gsl_ran_flat(r,xmin[1],xmax[1]);
             fpixel[0] = roundToNi(x[0]) - 1;
             fpixel[1] = roundToNi(x[1]) - 1;
+            fits_write_col(fileOutFits, TDOUBLE,  1, firstrow+i, firstelem, 1, &(x[0]), &status);
+            fits_write_col(fileOutFits, TDOUBLE,  2, firstrow+i, firstelem, 1, &(x[1]), &status);
+            fits_write_col(fileOutFits, typecode, 3, firstrow+i, firstelem, 1, table + (fpixel[1]*naxes[0]+fpixel[0])*size, &status);
             if(para->nz || para->zrange){
-               // z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
-               // fprintf(fileOut,"%f %f %g %f\n", x[0], x[1], convert(table,fpixel[1]*naxes[0]+fpixel[0]), z);
-            }else{
-               fits_write_col(fileOutFits, TDOUBLE, 1, firstrow+i, firstelem, 1, &(x[0]), &status);
-               fits_write_col(fileOutFits, TDOUBLE, 2, firstrow+i, firstelem, 1, &(x[1]), &status);
-               fits_write_col(fileOutFits, TFORM, 3, firstrow+i, firstelem, 1, &(result[fpixel[1]*naxes[0]+fpixel[0]]), &status);
-      		   if (status) fits_report_error(stderr, status);
+               z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
+               fits_write_col(fileOutFits, TDOUBLE, 4, firstrow+i, firstelem, 1, &z, &status);
             }
+            if (status) fits_report_error(stderr, status);
          }
-
 
       }else{
          fileOut = fopenAndCheck(para->fileOutName,"w");
-         /*    ATTENTION "convert" converts everything into double */
+         /*    ATTENTION "toDouble" converts everything into double */
          fprintf(stderr,"\nProgress =     ");
          for(i=0;i<para->npart;i++){
             printCount(&i,&para->npart,1000);
@@ -458,9 +451,9 @@ int randomCat(const Config *para){
             fpixel[1] = roundToNi(x[1]) - 1;
             if(para->nz || para->zrange){
                z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
-               fprintf(fileOut,"%f %f %g %f\n", x[0], x[1], convert(table,fpixel[1]*naxes[0]+fpixel[0]), z);
+               fprintf(fileOut,"%f %f %g %f\n", x[0], x[1], toDouble(table,fpixel[1]*naxes[0]+fpixel[0]), z);
             }else{
-               fprintf(fileOut,"%f %f %g\n", x[0], x[1], convert(table,fpixel[1]*naxes[0]+fpixel[0]));
+               fprintf(fileOut,"%f %f %g\n", x[0], x[1], toDouble(table,fpixel[1]*naxes[0]+fpixel[0]));
             }
          }
       }

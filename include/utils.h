@@ -165,5 +165,7 @@ int checkFileExt(const char *s1, const char *s2);
 int roundToNi(double a);
 int compareDoubles(const void *a,const void *b);
 
+char* concat(const char *s1, const char *s2);
+
 
 #endif

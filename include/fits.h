@@ -15,17 +15,12 @@
  *    FITS
  */
 
-void *readFits(const Config *para, int *bitpix, int *status, long naxes[2], double (**convert)(void *,long ));
+ void *readFits(const Config *para, int *bitpix, int *typecode, char *tform, int *status, long naxes[2], double (**toDouble)(void *,long ), int *size);
 
-
-double convertCHAR(void *table, long i);
-double convertSHORT(void *table, long i);
-double convertLONG(void *table, long i);
-double convertFLOAT(void *table, long i);
-double convertDOUBLE(void *table, long i);
-
-char *getFormatFromImageType_string(int bitpix);
-int getFormatFromImageType_number(int bitpix);
-
+double toDoubleCHAR(void *table, long i);
+double toDoubleSHORT(void *table, long i);
+double toDoubleLONG(void *table, long i);
+double toDoubleFLOAT(void *table, long i);
+double toDoubleDOUBLE(void *table, long i);
 
 #endif
