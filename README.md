@@ -4,7 +4,9 @@ Author: Jean Coupon.
 
 ## Description
 
-**[NEW]: fits support added for input files (faster reading, names for input columns, and [CFITSIO filters](http://heasarc.gsfc.nasa.gov/docs/software/fitsio/filters.html)). WARNING: the input and output catalogue format is `fits` if read from STDIN OR STDOUT, respectively.**
+**[NEW]: fits support added for input files (faster reading, names for input columns, and [CFITSIO filters](http://heasarc.gsfc.nasa.gov/docs/software/fitsio/filters.html)).**
+
+**WARNING: the input and output catalogue format is `fits` if read from STDIN OR STDOUT, respectively.**
 
 
 `venice` is a mask utility program that reads a mask file (DS9 or fits type) and a catalogue of objects to:
