@@ -61,12 +61,12 @@ Options:
 
 
 IMPORTANT NOTICES:
-- the general convention for venice is 0:INSIDE the mask, 1:OUTSIDE the mask,
-- the gsl library is used to generate an improved random catalogue. In order to initialize venice with a different seed, set "-seed N"
-- for .reg masks, only ds9-type polygons ("polygon(x1,y1,..,xn,yn)") are supported,
-- for .fits masks, the input catalogue should be given in image coordinates (x,y) and without the RA/DEC option; all points are returned with the pixel value added at the end of the line
-- if no output file is provided (-o OUTFILE), the result is prompted to the standard output (i.e. the terminal).
-- the format for file_nz.in should be: z n(z) in histogram form. GSL convention: bin[i] corresponds to range[i] <= x < range[i+1] the upper limit for the last bin is set to 100
+- the general convention for venice is `0`:INSIDE the mask, `1`:OUTSIDE the mask,
+- the gsl library is used to generate an improved random catalogue. In order to initialize venice with a different seed, set `-seed number`,
+- for `.reg` masks, only ds9-types: `polygon`,`box`,`circle`,`ellipse` are supported,
+- for `.fits` masks, the input catalogue should be given in image coordinates (x,y) and without the RA/DEC option; all points are returned with the pixel value added at the end of the line,
+- if no output file is provided (`-o OUTFILE`), the result is prompted to the standard output (i.e. the terminal),
+- the format for `file_nz.in` should be: `z n(z)` in histogram form. GSL convention: `bin[i]` corresponds to `range[i] <= x < range[i+1]`; the upper limit for the last bin is set to 100.
 
 ## Options
 
@@ -76,7 +76,7 @@ IMPORTANT NOTICES:
 $ venice -m mask[.reg,.fits] [OPTIONS]
 ```
 
-For this task, don't add a catalogue in input (If you add a catalogue in input, e.g. -cat file.cat, the program will automatically switch to the task #2, see further for details). If the mask file is a "DS9 type" mask file (with the extension .reg), only polygons will be taken into account (i.e.: "polygon(x1,y1,x2,y2,x3,y3)", see DS9 help for more details). If the mask is fits file, the convention is to consider object with value =0 as outside the mask, but the output will be in any case a "pixelized mask" in ASCII format with
+For this task, don't add a catalogue in input (if you add a catalogue in input, e.g. `-cat file.cat`, the program will automatically switch to the task #2, see below for details). If the mask file is a DS9-type mask file (with the extension `.reg`), only ds9-types: `polygon`,`box`,`circle`,`ellipse` will be taken into account, see DS9 help for more details). If the mask is a `.fits` file, the convention is to consider object with value =0 as outside the mask, but the output will be in any case a "pixelized mask" in ASCII format with:
 - 0 when the center of the pixel is inside the mask.
 - 1 when the center of the pixel is outside the mask.
 
@@ -113,9 +113,11 @@ The result in pixel_mask.out will look like this:
 
 ### 2. Finds objects inside/outside a mask
 
-The method used to determine if a point is inside a polygon is to draw a line between the point and a second point (outside the polygon) and count how many times the line crosses the sides of the polygon. If the number is odd, the object is inside, if the number is even, the point is outside (Press et al 2007, Numerical recipes in c++).
+For ds9-type masks, `venice` determines if a point is inside a polygon by drawing a line between a point and a second point (outside the polygon) and count how many times the line crosses the sides of the polygon. If the number is odd, the object is inside, if the number is even, the point is outside (Press et al 2007, Numerical recipes in c++).
 
-In order to improve the speed, the process is made in 2 times. A first quick check is performed to know if the point is inside or outside the square drawn by the extrema of the polygon (less time consuming) and then the "cross line" test is made.
+In order to improve the speed, the process is made in 2 times. A first quick check is performed to know if the point is inside or outside the square drawn by the extrema of the polygon (less time consuming) and then the above test is made.
+
+This is fast. The only limitation is that all mask entries (`polygon`,`box`,`circle`,`ellipse`) are converted into polygons and stored in memory as a binary tree. A very big mask file (> 10^5 entries) will take a significant amount of memory.
 
 The typical time for a CFHTLS wide catalogue and its terapix mask is about 5 seconds (200 000 objects in the catalogue and 1000 polygons in the mask).
 

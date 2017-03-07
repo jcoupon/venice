@@ -15,7 +15,7 @@
  *
  *    TODO:
  *    - adapt to be used with python
- *
+ *    - use RA DEC as input even with fits masks (use wcs functions)
  */
 
 #include "main.h"
