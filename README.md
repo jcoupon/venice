@@ -39,7 +39,7 @@ WARNING: venice without fits library is no longer supported (you must install th
 
 ## Usage
 
-```shell
+```
 Usage: venice -m mask.[reg,fits]               [OPTIONS] -> binary mask for visualization
     or venice -m mask.[reg,fits] -cat file.cat [OPTIONS] -> objects in/out of mask
     or venice -m mask.[reg,fits] -r            [OPTIONS] -> random catalogue
