@@ -18,7 +18,7 @@ If the input mask is in DS9 `.reg` format, the following region types are accept
 - `circle`
 - `ellipse`
 
-The convention used is `0` when the object is INSIDE the mask and `1` when the object is OUTSIDE.
+**The convention used is `0` when the object is INSIDE the mask and `1` when the object is OUTSIDE.**
 
 ## Installation
 
