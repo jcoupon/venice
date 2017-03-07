@@ -1,0 +1,98 @@
+Version history
+
+v 3.9.1 - May 2015
+- now saves the inputFile header (if any) in flagCat
+
+v 3.9 - Sept 2014
+- bug fixed in the function that reads the .reg file (thanks Sylvain!)
+
+v 3.8.4 - May 2013
+- increased the number of field to 500
+
+v 3.8.3 - Apr 2013
+- added the area in degree on top of random file
+
+v 3.8.2 - Oct 2012
+- correction at high declination (thanks Ben!)
+
+v 3.8.1 - Oct 2012
+- now reads ellipses, circle and box
+- can read from the stdin with -cat -
+
+v 3.8 - Aug. 2012
+- a redshift distribution can now be given in a form
+  of an file with histogram through the
+  option "-nz file_nz.in".
+- a redshift range can be given for volume limited
+  samples
+
+v 3.5 - Feb. 2012
+- started to implement a python wrapper.
+Contributor: Ben Granett
+
+v 3.4 - Feb. 2012
+- improved treatment of FITS masks
+- now able to compile without FITS support with
+  > make FITS=no
+- prints out limits in command line format
+
+v 3.3 - Dec 2011
+- new option "-cd" to generate constant density
+- added option descriptions for venice -h
+
+v 3.2 - Nov 2011
+- new option "-seed number" for the random number generator
+
+v 3.1 - Oct 2011
+- now supports fits mask file (".fits", image coordinates)
+
+v 3.04 - Oct 2011
+- corrected a bug in flagCat
+
+v 3.01 - Oct 2011
+- added "+EPS" in the algorithm to find an
+object within a polygon (was incorrect in some
+very rare cases)
+
+v 3.0 - Oct 2011
+- polygons are now stored in a tree with leaves
+being either empty of polygons of small enough
+to contain a few polygons only (currently set
+to the mean size of polygons... this has probably to
+be improved).
+
+v 2.2 - Sept 2011
+- gives the area with spherical coordinates option
+- default output in the standard ouput: stdout
+
+v 2.1 - July 2010
+- some precisions added in Makefile and README
+- in 'flagCat', the limits of the mask are no
+longer used as "default". If no limits are
+definied, an object oustide the mask limits will be
+now properly considered as "outside the mask".
+
+v 2.02 - Feb 2nd 2010
+- minor changes (changed some of
+printf formats to work with 64bit machines)
+
+v 2.01 - March 5 2009
+- bug corrected in flagcat (wrong ymax)
+
+v 2.0 - Feb 16th 2009
+- All parameters put in a single structure "Config".
+- File reading improved and simplified.
+- Now integrates random catalogue on a sphere.
+
+v 1.02 - Jan 17th 2009
+- the option format [-f] can be use in task 2.
+- the limits options can be used in task 2.
+- README updated.
+
+V 1.01 - April 2nd 2008
+- The pixelized mask limits can be definied by the user as well
+as the random catalogue limits.
+- More explanations added in the README file.
+
+V 1.00 - March 26th 2008
+- First version.

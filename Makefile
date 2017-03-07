@@ -1,46 +1,63 @@
-#------------------------------------------------#
-#Makefile for venice                             #	
-#------------------------------------------------#
+# Makefile for venice
 
-CC             = icc -use-asm
-FITS           = yes
-SRC            = main.c
-LDFLAGS        = -L$(HOME)/local/lib -lgsl -lgslcblas -lm
-#LDFLAGS        = -L/sw64/lib/ -lgsl -lgslcblas -lm
+# Where cfitsio library is installed
+CFITSIO =  # /usr/cfitsio
+
+# Where GSL library is installed
+GSL =  # /usr/local
+
+CC = gcc
+
+# Where python is installed
 CFLAGS_PYTHON  = -I/usr/include/python2.6
 LDFLAGS_PYTHON = -ldl -lpython2.6
 
-ifeq ($(FITS),yes)
-    LDFLAGS += -lcfitsio
-    SRC     += fits.c
-else
-   SRC     += withoutFits.c
+CFLAGS      = -Iinclude # -use-asm # for old icc versions
+LDFLAGS     =  -lgsl -lgslcblas -lm -lcfitsio
+RM          = rm -f
+EXEC        = bin/venice
+# SRC         = main.c
+# OBJ         = $(SRC:.c=.o)
+
+# source files
+SRCS    = utils.c fits.c init.c main.c
+OBJS    = $(SRCS:.c=.o)
+
+# Headers for libraries
+ifneq ($(CFITSIO), )
+	CFLAGS     +=  -I$(CFITSIO)/include
+	LDFLAGS    +=  -L$(CFITSIO)/lib
 endif
 
-CFLAGS	= -I$(HOME)/local/include -fPIC #-Wall -Wuninitialized -O3 
-EXEC	= venice
-OBJ	= $(SRC:.c=.o)
+ifneq ($(GSL), )
+	CFLAGS     +=  -I$(GSL)/include
+	LDFLAGS    +=  -L$(GSL)/lib
+endif
 
+.PHONY: all
 all: $(EXEC)
 
-$(EXEC) : $(OBJ)
-	$(CC) -o $@ $^ $(LDFLAGS)
+vpath %.h include
+vpath %.c src
 
-%.o: %.c
-	$(CC) -o $@ -c $< $(CFLAGS)
+$(EXEC):  $(OBJS)
+	$(CC)  -o $@ $^ $(CFLAGS) $(LDFLAGS)
 
-.PHONY: clean mrproper
+%.o:  %.c
+	$(CC) -c -o $@ $< $(CFLAGS)
 
+%.h:
+
+.PHONY: clean
 clean:
-	rm -rf *.o $(EXEC).tar *.so $(EXEC)py.py $(EXEC)py.pyc $(SRC:.c=_wrap.c)
+	-${RM} ${OBJS}
 
-mrproper: clean
-	rm -rf $(EXEC)
+tar_test:
+	tar czvf test_venice.tgz test
+	mv test_venice.tgz $(HOME)/gdrive/public
 
-tar: 
-	tar cvf $(EXEC).tar Makefile *.c *.h README
-
+# TODO: the code below is probalably broken
 python:
-	swig -python main.i	
+	swig -python main.i
 	$(CC) -c $(SRC) main_wrap.c $(CFLAGS) $(CFLAGS_PYTHON)
 	$(CC) -bundle $(SRC:.c=.o) main_wrap.o -o _$(EXEC)py.so $(LDFLAGS) $(LDFLAGS_PYTHON)
