@@ -4,11 +4,11 @@ Author: Jean Coupon.
 
 ## Description
 
-`venice` is a mask utility program that reads a mask file (DS9 or fits type) and a catalogue of objects and computes one of the following tasks:
+`venice` is a mask utility program that reads a mask file (DS9 or fits type) and a catalogue of objects to:
 
-1. Creates a pixelized mask.
-2. Finds objects inside/outside a mask.
-3. Generates a random catalogue of objects inside/outside a mask.
+1. create a pixelized mask,
+2. find objects inside/outside a mask,
+3. or generate a random catalogue of objects inside/outside a mask.
 
 The program reads the mask file and checks if a point, giving its coordinates, is inside or outside the mask, i.e. inside or outside at least one polygon of the mask. The method used to determine if a point is inside a polygon is to draw a line between the point and a second point (outside the polygon) and count how many times the line crosses the sides of the polygon. If the number is odd, the object is inside, if the number is even, the point is outside (Press et al 2007, Numerical recipes in c++).
 
