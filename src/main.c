@@ -16,6 +16,8 @@
  *    TODO:
  *    - adapt to be used with python
  *    - use RA DEC as input even with fits masks (use wcs functions)
+ *    - correct "Definied" typos
+ *    - allow different input and output files
  */
 
 #include "main.h"
@@ -39,7 +41,11 @@ int main(int argc, char **argv)
          mask2d(&para);     /* binary mask for visualization */
          break;
       case 2:
-         flagCat(&para);    /* objects in/out of mask */
+         if(para.oFileType == FITS){
+            flagCatFits(&para);    /* objects in/out of mask */
+         }else{
+            flagCat(&para);    /* objects in/out of mask */
+         }
          break;
       case 3:
          randomCat(&para);  /* random catalogue */
@@ -161,12 +167,137 @@ int  mask2d(const Config *para){
    return EXIT_SUCCESS;
 }
 
+int flagCatFits(const Config *para){
+   /*
+    *    Input fits catalogue version
+    *
+    *    Reads fileCatIn and add a flag at the end of the line. 1 is outside
+    *    the mask and 0 is inside the mask. xcol and ycol are the column ids
+    *    of resp. x coordinate and y coordinate.
+    *    For mask fits format, it writes the pixel value.
+    */
+
+
+   int Npolys, poly_id, flag, verbose = 1;
+   double x[2], x0[2], xmin[2], xmax[2];
+   size_t i, Ncol;
+   long N;
+
+	fitsfile *fileCatIn;
+	int status = 0, datatype, id_num[2];
+
+	fits_open_table(&fileCatIn, para->fileCatInName, READONLY, &status);
+	if (status) fits_report_error(stderr, status);
+
+   fits_get_num_rows(fileCatIn, &N, &status);
+	if (status) fits_report_error(stderr, status);
+
+   fprintf(stderr,"Nobjects = %zd\n", N);
+
+   int xcol = atoi(para->xcol);
+   int ycol = atoi(para->ycol);
+	if(xcol == 0){ /* 	if input column name is a string it will return "0" */
+			fits_get_colnum(fileCatIn, CASEINSEN, para->xcol, &(xcol), &status);
+			if (status) fits_report_error(stderr, status);
+	}
+	if(ycol == 0){ /* 	if input column name is a string it will return "0" */
+			fits_get_colnum(fileCatIn, CASEINSEN, para->ycol, &(ycol), &status);
+			if (status) fits_report_error(stderr, status);
+	}
+
+   // fprintf(stderr,"cols: %d %d\n", xcol, ycol);
+
+   fitsfile *fileOutFits;     /* pointer to the FITS file, defined in fitsio.h */
+
+
+   fits_create_file(&fileOutFits, para->fileOutName, &status);
+	if (status) fits_report_error(stderr, status);
+
+   fits_copy_file(fileCatIn, fileOutFits, 1, 1, 1, &status);
+	if (status) fits_report_error(stderr, status);
+
+   int ncols;
+
+   fits_get_num_cols(fileOutFits, &ncols, &status);
+	if (status) fits_report_error(stderr, status);
+
+   if(checkFileExt(para->fileRegInName,".fits")){
+      if(para->coordType != CART){
+         fprintf(stderr,"%s: fits file detected. coord should be set to cart for image coordinates. Exiting...\n",MYNAME);
+         exit(EXIT_FAILURE);
+      }
+
+      long fpixel[2], naxes[2];
+      int bitpix, typecode;
+      char tform_char;
+      double (*toDouble)(void *,long ) = NULL;
+
+      /*    read fits file and put in table */
+      void *table = readFits(para,&bitpix,&typecode,&tform_char,&status,naxes,&toDouble,NULL);
+
+      /*    define limits */
+      xmin[0] = xmin[1] = 1.0;
+      xmax[0] = naxes[0];
+      xmax[1] = naxes[1];
+      if(para->minDefinied[0]) xmin[0] = para->min[0];
+      if(para->maxDefinied[0]) xmax[0] = para->max[0];
+      if(para->minDefinied[1]) xmin[1] = para->min[1];
+      if(para->maxDefinied[1]) xmax[1] = para->max[1];
+      /*    print out limits */
+      fprintf(stderr,"limits:\n");
+      fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
+
+
+
+      //char *ttype[] = { "flag" };
+      //char *tform[] = { concat("1", &tform_char)};
+      //char *tunit[] = { "\0" };
+
+
+      fits_insert_col(fileOutFits, ncols+1, "flag",  concat("1", &tform_char), &status);
+	   if (status) fits_report_error(stderr, status);
+
+
+
+
+   }
+
+
+
+
+   // para->xcol
+
+	/* 	convert column names into column numbers if required */
+//   for(j=0;j<NIDSMAX;j++) {
+//		id_num[j] = atoi(id[j]);
+//		if(id_num[j] == 0){ /* 	if input column name is a string it will return "0" */
+//			fits_get_colnum(fileIn, CASEINSEN, id[j], &(id_num[j]), &status);
+//			if (status) fits_report_error(stderr, status);
+//		}
+//	}
+
+   /* 	get size of file and allocate data */
+
+
+	fits_close_file(fileOutFits, &status);
+	if (status) fits_report_error(stderr, status);
+
+
+
+	fits_close_file(fileCatIn, &status);
+	if (status) fits_report_error(stderr, status);
+
+   return EXIT_SUCCESS;
+
+}
+
+
 int flagCat(const Config *para){
    /*
     *    Reads fileCatIn and add a flag at the end of the line. 1 is outside
     *    the mask and 0 is inside the mask. xcol and ycol are the column ids
     *    of resp. x coordinate and y coordinate.
-    *    For fits format, it writes the pixel value.
+    *    For mask fits format, it writes the pixel value.
     */
 
    int Npolys, poly_id, flag, verbose = 1;
@@ -186,6 +317,9 @@ int flagCat(const Config *para){
    }else{
       verbose = 0;
    }
+
+   int xcol = atoi(para->xcol);
+   int ycol = atoi(para->ycol);
 
    if(checkFileExt(para->fileRegInName,".fits")){
       if(para->coordType != CART){
@@ -223,8 +357,8 @@ int flagCat(const Config *para){
          if(getStrings(line,item," ",&Ncol)){
             i++;
             if(verbose) printCount(&i,&N,1000);
-            x[0] = getDoubleValue(item,para->xcol);
-            x[1] = getDoubleValue(item,para->ycol);
+            x[0] = getDoubleValue(item,xcol);
+            x[1] = getDoubleValue(item,ycol);
             fpixel[0] = roundToNi(x[0]) - 1;
             fpixel[1] = roundToNi(x[1]) - 1;
             str_end = strstr(line,"\n");/* cariage return to the end of the line */
@@ -269,8 +403,8 @@ int flagCat(const Config *para){
          if(getStrings(line,item," ",&Ncol)){
             i++;
             if(verbose) printCount(&i,&N,1000);
-            x[0] = getDoubleValue(item,para->xcol);
-            x[1] = getDoubleValue(item,para->ycol);
+            x[0] = getDoubleValue(item,xcol);
+            x[1] = getDoubleValue(item,ycol);
 
             if(flag=0, !insidePolygonTree(polyTree,x0,x,&poly_id)) flag = 1;
 
@@ -403,23 +537,20 @@ int randomCat(const Config *para){
       fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
 
       if(para->oFileType == FITS){
+         fprintf(stderr, "Outpout file or stdout format: fits\n");
 
          fits_create_file(&fileOutFits, para->fileOutName, &status);
    		if (status) fits_report_error(stderr, status);
 
          /*    define the name, datatype, and physical units for the columns */
+         int tfields   = 4;   /* table will have 3 columns */
+         char *ttype[] = { "x", "y", "flag", "z" };
+         char *tform[] = { "1D", "1D", concat("1", &tform_char), "1D"};
+         char *tunit[] = { "pix", "pix", "\0", "\0" };
          if(para->nz || para->zrange){
-            int tfields   = 4;   /* table will have 3 columns */
-            char *ttype[] = { "x", "y", "flag", "z" };
-            char *tform[] = { "1D", "1D", concat("1", &tform_char), "1D"};
-            char *tunit[] = { "pix", "pix", "\0", "\0" };
             fits_create_tbl(fileOutFits, BINARY_TBL, 0, tfields, ttype, tform, tunit, "DATA", &status);
          }else{
-            int tfields   = 3;   /* table will have 3 columns */
-            char *ttype[] = { "x", "y", "flag" };
-            char *tform[] = { "1D", "1D", concat("1", &tform_char)};
-            char *tunit[] = { "pix", "pix", "\0" };
-            fits_create_tbl(fileOutFits, BINARY_TBL, 0, tfields, ttype, tform, tunit, "DATA", &status);
+            fits_create_tbl(fileOutFits, BINARY_TBL, 0, tfields-1, ttype, tform, tunit, "DATA", &status);
          }
 
          fprintf(stderr,"\nProgress =     ");
@@ -440,6 +571,8 @@ int randomCat(const Config *para){
          }
 
       }else{
+         fprintf(stderr, "Outpout file or stdout format: ascii\n");
+
          fileOut = fopenAndCheck(para->fileOutName,"w");
          /*    ATTENTION "toDouble" converts everything into double */
          fprintf(stderr,"\nProgress =     ");
@@ -463,9 +596,11 @@ int randomCat(const Config *para){
 
    }else if(checkFileExt(para->fileRegInName,".reg")){
 
+      long count;
+
       FILE *fileRegIn = fopenAndCheck(para->fileRegInName,"r");
       Node *polyTree  = readPolygonFileTree(fileRegIn,xmin,xmax);
-      Polygon *polys = (Polygon *)polyTree->polysAll;
+      Polygon *polys  = (Polygon *)polyTree->polysAll;
       Npolys          = polyTree->Npolys;
       fclose(fileRegIn);
 
@@ -488,7 +623,6 @@ int randomCat(const Config *para){
          area = (xmax[0] - xmin[0])*(xmax[1] - xmin[1]);
       }
       fprintf(stderr, "Area = %f\n", area);
-      fprintf(fileOut,"# %f\n", area);
 
       if(para->constDen){
          npart =  (size_t)round((double)para->npart*area);
@@ -497,45 +631,149 @@ int randomCat(const Config *para){
       }
       fprintf(stderr,"Creates a random catalogue with N = %zd objects. Format = %d\n",npart,para->format);
 
-      fprintf(stderr,"Progress =     ");
-      for(i=0;i<npart;i++){
-         printCount(&i,&npart,1000);
-         if(para->coordType == CART){
-            x[0] = gsl_ran_flat(r,xmin[0],xmax[0]);
-            x[1] = gsl_ran_flat(r,xmin[1],xmax[1]);
-         }else{
-            x[0] = gsl_ran_flat(r,xmin[0],xmax[0]);
-            x[1] = gsl_ran_flat(r,sin(xmin[1]*PI/180.0),sin(xmax[1]*PI/180.0));
-            x[1] = asin(x[1])*180.0/PI;
-         }
-         /*    1 = outside the mask, 0 = inside the mask */
-         if(flag=0,!insidePolygonTree(polyTree,x0,x,&poly_id)) flag = 1;
+      if(para->oFileType == FITS){
+         fprintf(stderr, "Outpout file or stdout format: fits\n");
+
+         fits_create_file(&fileOutFits, para->fileOutName, &status);
+   		if (status) fits_report_error(stderr, status);
+
+         /*    define the name, datatype, and physical units for the columns */
          if(para->nz || para->zrange){
-            z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
-            switch (para->format){
-               case 1: /* only objects outside the mask */
-               if(flag) fprintf(fileOut,"%f %f %f\n",x[0],x[1],z);
-               break;
-               case 2: /* only objects inside the mask */
-               if(!flag) fprintf(fileOut,"%f %f %f\n",x[0],x[1],z);
-               break;
-               case 3: /* all objects with the flag */
-               fprintf(fileOut,"%f %f %d %f\n",x[0],x[1],flag,z);
+            int tfields   = 4;   /* table will have 3 or 4 columns */
+            char *ttype[] = { "ra", "dec", "z", "flag" };
+            char *tform[] = { "1D", "1D", "1D", "1I"};
+            char *tunit[] = { "deg", "deg", "\0", "\0" };
+            if (para->format == 1 || para->format == 2) {
+               fits_create_tbl(fileOutFits, BINARY_TBL, 0, tfields-1, ttype, tform, tunit, "DATA", &status);
+            }else{
+               fits_create_tbl(fileOutFits, BINARY_TBL, 0, tfields, ttype, tform, tunit, "DATA", &status);
             }
          }else{
-            switch (para->format){
-               case 1: /* only objects outside the mask */
-               if(flag) fprintf(fileOut,"%f %f\n",x[0],x[1]);
-               break;
-               case 2: /* only objects inside the mask */
-               if(!flag) fprintf(fileOut,"%f %f\n",x[0],x[1]);
-               break;
-               case 3: /* all objects with the flag */
-               fprintf(fileOut,"%f %f %d\n",x[0],x[1],flag);
+            int tfields   = 3;   /* table will have 2 or 3 columns */
+            char *ttype[] = { "ra", "dec", "flag" };
+            char *tform[] = { "1D", "1D", "1I"};
+            char *tunit[] = { "deg", "deg", "\0" };
+            if (para->format == 1 || para->format == 2) {
+               fits_create_tbl(fileOutFits, BINARY_TBL, 0, tfields-1, ttype, tform, tunit, "DATA", &status);
+            }else{
+               fits_create_tbl(fileOutFits, BINARY_TBL, 0, tfields, ttype, tform, tunit, "DATA", &status);
             }
          }
+
+         if (status) fits_report_error(stderr, status);
+
+         fprintf(stderr,"Progress =     ");
+         count = 0;
+         for(i=0;i<npart;i++){
+            printCount(&i,&npart,1000);
+            if(para->coordType == CART){
+               x[0] = gsl_ran_flat(r,xmin[0],xmax[0]);
+               x[1] = gsl_ran_flat(r,xmin[1],xmax[1]);
+            }else{
+               x[0] = gsl_ran_flat(r,xmin[0],xmax[0]);
+               x[1] = gsl_ran_flat(r,sin(xmin[1]*PI/180.0),sin(xmax[1]*PI/180.0));
+               x[1] = asin(x[1])*180.0/PI;
+            }
+            /*    1 = outside the mask, 0 = inside the mask */
+            if(flag=0,!insidePolygonTree(polyTree,x0,x,&poly_id)) flag = 1;
+
+
+            switch (para->format){
+               case 1: /* only objects outside the mask */
+                  if(flag){
+                     fits_write_col(fileOutFits, TDOUBLE, 1, firstrow+count, firstelem, 1, &(x[0]), &status);
+                     fits_write_col(fileOutFits, TDOUBLE, 2, firstrow+count, firstelem, 1, &(x[1]), &status);
+                     if(para->nz || para->zrange){
+                        z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
+                        fits_write_col(fileOutFits, TDOUBLE, 3, firstrow+count, firstelem, 1, &z, &status);
+                     }
+                     if (status) fits_report_error(stderr, status);
+                     count++;
+                  }
+                  break;
+               case 2: /* only objects inside the mask */
+                  if(!flag){
+                     fits_write_col(fileOutFits, TDOUBLE, 1, firstrow+count, firstelem, 1, &(x[0]), &status);
+                     fits_write_col(fileOutFits, TDOUBLE, 2, firstrow+count, firstelem, 1, &(x[1]), &status);
+                     if(para->nz || para->zrange){
+                        z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
+                        fits_write_col(fileOutFits, TDOUBLE, 3, firstrow+count, firstelem, 1, &z, &status);
+                     }
+                     if (status) fits_report_error(stderr, status);
+                     count++;
+                  }
+                  break;
+               case 3: /* all objects with the flag */
+                  fits_write_col(fileOutFits, TDOUBLE, 1, firstrow+i, firstelem, 1, &(x[0]), &status);
+                  fits_write_col(fileOutFits, TDOUBLE, 2, firstrow+i, firstelem, 1, &(x[1]), &status);
+                  if(para->nz || para->zrange){
+                     z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
+                     fits_write_col(fileOutFits, TDOUBLE, 3, firstrow+count, firstelem, 1, &z, &status);
+                     fits_write_col(fileOutFits, TSHORT, 4, firstrow+count, firstelem, 1, &flag, &status);
+                  }else{
+                     fits_write_col(fileOutFits, TSHORT, 3, firstrow+count, firstelem, 1, &flag, &status);
+                  }
+                  if (status) fits_report_error(stderr, status);
+                  count++;
+                  break;
+            }
+
+         }
+         fprintf(stderr,"\b\b\b\b100%%\n");
+
+
+      }else{
+         fprintf(stderr, "Outpout file or stdout format: ascii\n");
+
+         fileOut = fopenAndCheck(para->fileOutName,"w");
+
+         fprintf(fileOut,"# %f\n", area);
+
+         fprintf(stderr,"Progress =     ");
+         for(i=0;i<npart;i++){
+            printCount(&i,&npart,1000);
+            if(para->coordType == CART){
+               x[0] = gsl_ran_flat(r,xmin[0],xmax[0]);
+               x[1] = gsl_ran_flat(r,xmin[1],xmax[1]);
+            }else{
+               x[0] = gsl_ran_flat(r,xmin[0],xmax[0]);
+               x[1] = gsl_ran_flat(r,sin(xmin[1]*PI/180.0),sin(xmax[1]*PI/180.0));
+               x[1] = asin(x[1])*180.0/PI;
+            }
+            /*    1 = outside the mask, 0 = inside the mask */
+            if(flag=0,!insidePolygonTree(polyTree,x0,x,&poly_id)) flag = 1;
+            if(para->nz || para->zrange){
+               z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
+               switch (para->format){
+                  case 1: /* only objects outside the mask */
+                     if(flag) fprintf(fileOut,"%f %f %f\n",x[0],x[1],z);
+                     break;
+                  case 2: /* only objects inside the mask */
+                     if(!flag) fprintf(fileOut,"%f %f %f\n",x[0],x[1],z);
+                     break;
+                  case 3: /* all objects with the flag */
+                     fprintf(fileOut,"%f %f %d %f\n",x[0],x[1],flag,z);
+                     break;
+               }
+            }else{
+               switch (para->format){
+                  case 1: /* only objects outside the mask */
+                     if(flag) fprintf(fileOut,"%f %f\n",x[0],x[1]);
+                     break;
+                  case 2: /* only objects inside the mask */
+                     if(!flag) fprintf(fileOut,"%f %f\n",x[0],x[1]);
+                     break;
+                  case 3: /* all objects with the flag */
+                     fprintf(fileOut,"%f %f %d\n",x[0],x[1],flag);
+                     break;
+               }
+            }
+         }
+         fprintf(stderr,"\b\b\b\b100%%\n");
+
       }
-      fprintf(stderr,"\b\b\b\b100%%\n");
+
+
    }else if(!strcmp(para->fileRegInName,"\0")){
 
       fprintf(stderr,"Generating catalogue with no mask...\n");
@@ -543,6 +781,7 @@ int randomCat(const Config *para){
       xmax[0] = para->max[0];
       xmin[1] = para->min[1];
       xmax[1] = para->max[1];
+
       /*    print out limits */
       fprintf(stderr,"limits:\n");
       fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
@@ -552,35 +791,90 @@ int randomCat(const Config *para){
          area = (xmax[0] - xmin[0])*(xmax[1] - xmin[1]);
       }
       fprintf(stderr, "Area = %f\n", area);
-      fprintf(fileOut, "# %f\n", area);
 
       if(para->constDen){
          npart = (size_t)round((double)para->npart*area);
       }else{
          npart = para->npart;
       }
-      fprintf(stderr,"Creates a random catalogue with N = %zd objects.\n",npart);
-      fprintf(stderr,"Progress =     ");
-      for(i=0;i<npart;i++){
-         printCount(&i,&npart,1000);
+
+      if(para->oFileType == FITS){
+         fprintf(stderr, "Outpout file or stdout format: fits\n");
+
+         fits_create_file(&fileOutFits, para->fileOutName, &status);
+   		if (status) fits_report_error(stderr, status);
+
+         /*    define the name, datatype, and physical units for the columns */
+         int tfields   = 3;   /* table will have 3 columns */
+         char *ttype[] = { "ra", "dec", "z" };
+         char *tform[] = { "1D", "1D", "1D"};
+         char *tunit[] = { "deg", "deg", "\0" };
          if(para->coordType == CART){
-            x[0] = gsl_ran_flat(r,xmin[0],xmax[0]);
-            x[1] = gsl_ran_flat(r,xmin[1],xmax[1]);
-         }else{
-            x[0] = gsl_ran_flat(r,xmin[0],xmax[0]);
-            x[1] = gsl_ran_flat(r,sin(xmin[1]*PI/180.0),sin(xmax[1]*PI/180.0));
-            x[1] = asin(x[1])*180.0/PI;
+            ttype[0] = "x";
+            ttype[1] = "y";
+            tunit[0] = "pix";
+            tunit[1] = "pix";
          }
          if(para->nz || para->zrange){
-            z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
-            fprintf(fileOut,"%f %f %f\n", x[0], x[1], z);
+            fits_create_tbl(fileOutFits, BINARY_TBL, 0, tfields, ttype, tform, tunit, "DATA", &status);
          }else{
-            fprintf(fileOut,"%f %f\n", x[0], x[1]);
+            fits_create_tbl(fileOutFits, BINARY_TBL, 0, tfields-1, ttype, tform, tunit, "DATA", &status);
          }
+
+         fprintf(stderr,"Creates a random catalogue with N = %zd objects.\n",npart);
+         fprintf(stderr,"Progress =     ");
+         for(i=0;i<npart;i++){
+            printCount(&i,&npart,1000);
+            if(para->coordType == CART){
+               x[0] = gsl_ran_flat(r,xmin[0],xmax[0]);
+               x[1] = gsl_ran_flat(r,xmin[1],xmax[1]);
+            }else{
+               x[0] = gsl_ran_flat(r,xmin[0],xmax[0]);
+               x[1] = gsl_ran_flat(r,sin(xmin[1]*PI/180.0),sin(xmax[1]*PI/180.0));
+               x[1] = asin(x[1])*180.0/PI;
+            }
+            fits_write_col(fileOutFits, TDOUBLE,  1, firstrow+i, firstelem, 1, &(x[0]), &status);
+            fits_write_col(fileOutFits, TDOUBLE,  2, firstrow+i, firstelem, 1, &(x[1]), &status);
+            if(para->nz || para->zrange){
+               z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
+               fits_write_col(fileOutFits, TDOUBLE, 3, firstrow+i, firstelem, 1, &z, &status);
+            }
+            if (status) fits_report_error(stderr, status);
+         }
+
+         fprintf(stderr,"\b\b\b\b100%%\n");
+
+      }else{
+
+         fprintf(stderr, "Outpout file or stdout format: ascii\n");
+
+         fileOut = fopenAndCheck(para->fileOutName,"w");
+
+         fprintf(fileOut, "# %f\n", area);
+
+         fprintf(stderr,"Creates a random catalogue with N = %zd objects.\n",npart);
+         fprintf(stderr,"Progress =     ");
+         for(i=0;i<npart;i++){
+            printCount(&i,&npart,1000);
+            if(para->coordType == CART){
+               x[0] = gsl_ran_flat(r,xmin[0],xmax[0]);
+               x[1] = gsl_ran_flat(r,xmin[1],xmax[1]);
+            }else{
+               x[0] = gsl_ran_flat(r,xmin[0],xmax[0]);
+               x[1] = gsl_ran_flat(r,sin(xmin[1]*PI/180.0),sin(xmax[1]*PI/180.0));
+               x[1] = asin(x[1])*180.0/PI;
+            }
+            if(para->nz || para->zrange){
+               z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
+               fprintf(fileOut,"%f %f %f\n", x[0], x[1], z);
+            }else{
+               fprintf(fileOut,"%f %f\n", x[0], x[1]);
+            }
+         }
+         fflush(stdout);
+         fprintf(stderr,"\b\b\b\b100%%\n");
+
       }
-      fflush(stdout);
-      fprintf(stderr,"\b\b\b\b100%%\n");
-      return(EXIT_SUCCESS);
 
    }else{
 

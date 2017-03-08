@@ -83,7 +83,7 @@ typedef struct Config
 	char fileNofZName[1000];
 	int nz, zrange;
 	int nx,ny,format;
-	int xcol,ycol;
+	char *xcol,*ycol;
 	int coordType, constDen;
 	size_t npart,seed;
 	double min[2], max[2], zmin, zmax;
