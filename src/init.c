@@ -20,8 +20,10 @@ int readParameters(int argc, char **argv, Config *para){
 	task            = 1;
 	para->nx        = 512;
 	para->ny        = 512;
-	para->xcol      = 1;
-	para->ycol      = 2;
+	para->xcol = malloc((72+1) * sizeof(char));
+	para->ycol = malloc((72+1) * sizeof(char));
+	strcpy(para->xcol,"1");
+	strcpy(para->ycol,"2");
 	para->npart     = 1000000;
 	para->format    = 1;
 	para->coordType = CART;
@@ -46,6 +48,7 @@ int readParameters(int argc, char **argv, Config *para){
 		para->max[i] = 0.0;
 	}
 
+
 	strcpy(MYNAME,"venice");
 	strcpy(para->fileOutName,"");
 	strcpy(para->fileCatInName,"\0");
@@ -69,6 +72,7 @@ int readParameters(int argc, char **argv, Config *para){
 			fprintf(stderr,"    -ofmt [ascii,fits]       output file format, default:fits if stdout\n");
 			fprintf(stderr,"    -f [outside,inside,all]  output format, default:outside\n");
 			fprintf(stderr,"    -[x,y]col N              column id for x and y (starts at 1)\n");
+			fprintf(stderr,"                             One may use column names for input fits catalogue\n");
 			fprintf(stderr,"    -coord [cart,spher]      coordinate type, default:cart\n");
 			fprintf(stderr,"    -[x,y]min value          lower limit for x and y\n");
 			fprintf(stderr,"    -[x,y]max value          upper limit for x and y\n");
@@ -138,14 +142,16 @@ int readParameters(int argc, char **argv, Config *para){
 				fprintf(stderr,"Missing argument after %s\nExiting...\n",argv[i]);
 				exit(-1);
 			}
-			para->xcol = atoi(argv[i+1]);
+			strcpy(para->xcol,argv[i+1]);
+			// para->xcol = atoi(argv[i+1]);
 		}
 		if(!strcmp(argv[i],"-ycol")){
 			if(argv[i+1] == NULL){
 				fprintf(stderr,"Missing argument after %s\nExiting...\n",argv[i]);
 				exit(-1);
 			}
-			para->ycol = atoi(argv[i+1]);
+			strcpy(para->ycol,argv[i+1]);
+			// para->ycol = atoi(argv[i+1]);
 		}
 		/*		NPART for the random catalogue */
 		if(!strcmp(argv[i],"-npart")){
@@ -300,6 +306,13 @@ int readParameters(int argc, char **argv, Config *para){
 	/* 	stdout if no output file given */
 	if( !strcmp(para->fileOutName, "\0")){
 		strcpy(para->fileOutName,"-");
+	}
+	if(task == 2){
+		/* 	input and output format must be the same */
+		if( (para->catFileType == ASCII && para->oFileType == FITS) || (para->catFileType == FITS && para->oFileType == ASCII)){
+			fprintf(stderr,"The input and output catalogues must have the same format. Exiting...\n");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 
