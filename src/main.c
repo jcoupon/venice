@@ -458,15 +458,6 @@ int randomCat(const Config *para){
          }
       }
 
-
-
-
-
-
-
-
-
-
       fprintf(stderr,"\b\b\b\b100%%\n");
       free(table);
 
