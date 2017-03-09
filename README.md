@@ -76,6 +76,7 @@ IMPORTANT NOTICES:
 - for `.fits` masks, the input catalogue should be given in image coordinates (x,y) and without the RA/DEC option; all points are returned with the pixel value added at the end of the line,
 - if no output file is provided (`-o OUTFILE`), the result is prompted to the standard output (i.e. the terminal),
 - the format for `file_nz.in` should be: `z n(z)` in histogram form. GSL convention: `bin[i]` corresponds to `range[i] <= x < range[i+1]`; the upper limit for the last bin is set to 100.
+- if the input catalogue is given in fits format, the output catalogue also has to be in fits
 
 ## Options
 
