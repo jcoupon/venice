@@ -41,9 +41,9 @@ void *readFits(const Config *para, int *bitpix, int *typecode, char *tform, int 
          fits_read_pix(fptr,TBYTE,fpixel,naxes[0]*naxes[1],NULL,table_CHAR,NULL,status);
          result = (void *)table_CHAR;
          *toDouble = toDoubleCHAR;
-         *size = sizeof(char);
-         *typecode = TBYTE;
-         *tform = 'B';
+         if (size != NULL) *size = sizeof(char);
+         if (typecode != NULL) *typecode = TBYTE;
+         if (tform != NULL) *tform = 'B';
          break;
       case SHORT_IMG:
          fprintf(stderr,"SHORT)...\n");
@@ -51,9 +51,9 @@ void *readFits(const Config *para, int *bitpix, int *typecode, char *tform, int 
          fits_read_pix(fptr,TSHORT,fpixel,naxes[0]*naxes[1],NULL,table_SHORT,NULL,status);
          result = (void *)table_SHORT;
          *toDouble = toDoubleSHORT;
-         *size = sizeof(short);
-         *typecode = TSHORT;
-         *tform = 'I';
+         if (size != NULL) *size = sizeof(short);
+         if (typecode != NULL) *typecode = TSHORT;
+         if (tform != NULL) *tform = 'I';
          break;
       case LONG_IMG:
          fprintf(stderr,"LONG)...\n");
@@ -61,9 +61,9 @@ void *readFits(const Config *para, int *bitpix, int *typecode, char *tform, int 
          fits_read_pix(fptr,TLONG,fpixel,naxes[0]*naxes[1],NULL,table_LONG,NULL,status);
          result = (void *)table_LONG;
          *toDouble = toDoubleLONG;
-         *size = sizeof(long);
-         *typecode = TLONG;
-         *tform = 'K';
+         if (size != NULL) *size = sizeof(long);
+         if (typecode != NULL) *typecode = TLONG;
+         if (tform != NULL) *tform = 'K';
          break;
       case FLOAT_IMG:
          fprintf(stderr,"FLOAT)...\n");
@@ -71,9 +71,9 @@ void *readFits(const Config *para, int *bitpix, int *typecode, char *tform, int 
          fits_read_pix(fptr,TFLOAT,fpixel,naxes[0]*naxes[1],NULL,table_FLOAT,NULL,status);
          result = (void *)table_FLOAT;
          *toDouble = toDoubleFLOAT;
-         *size = sizeof(float);
-         *typecode = TFLOAT;
-         *tform = 'E';
+         if (size != NULL) *size = sizeof(float);
+         if (typecode != NULL) *typecode = TFLOAT;
+         if (tform != NULL) *tform = 'E';
          break;
       case DOUBLE_IMG:
          fprintf(stderr,"DOUBLE)...\n");
@@ -81,9 +81,9 @@ void *readFits(const Config *para, int *bitpix, int *typecode, char *tform, int 
          fits_read_pix(fptr,TDOUBLE,fpixel,naxes[0]*naxes[1],NULL,table_DOUBLE,NULL,status);
          result = (void *)table_DOUBLE;
          *toDouble = toDoubleDOUBLE;
-         *size = sizeof(double);
-         *typecode = TDOUBLE;
-         *tform = 'D';
+         if (size != NULL) *size = sizeof(double);
+         if (typecode != NULL) *typecode = TDOUBLE;
+         if (tform != NULL) *tform = 'D';
          break;
       default:
          fprintf(stderr,"NULL) \n%s: fits format not recognized. Exiting...\n",MYNAME);
@@ -117,4 +117,81 @@ double toDoubleFLOAT(void *table, long i){
 double toDoubleDOUBLE(void *table, long i){
    double *result = (double *)table;
    return result[i];
+}
+
+
+void readColFits(fitsfile *fileIn, int id_num, long N, double *x){
+	/* 	Read one column in fits file. */
+
+
+		int status = 0, datatype, anynul; /* MUST initialize status */
+		long n, repeat, width;
+
+		char tmp_string[1000];
+		short tmp_short;
+		int tmp_int;
+		long tmp_long;
+		float tmp_float;
+		double tmp_double;
+
+      /* 	get colum format */
+		fits_get_coltype(fileIn, id_num, &datatype, &repeat, &width, &status);
+
+		/* 	loop over rows depending on column format*/
+		switch(datatype){
+
+			case TSTRING :
+				for(n=0;n<N;n++){
+					fits_read_col(fileIn, datatype, id_num, n+1, 1, 1, NULL, &tmp_string, &anynul, &status);
+					x[n] = atof(tmp_string);
+				}
+				break;
+
+			case TSHORT :
+				for(n=0;n<N;n++){
+					fits_read_col(fileIn, datatype, id_num, n+1, 1, 1, NULL, &tmp_short, &anynul, &status);
+					x[n] = (double) tmp_short;
+				}
+				break;
+
+			case TINT :
+				for(n=0;n<N;n++){
+					fits_read_col(fileIn, datatype, id_num, n+1, 1, 1, NULL, &tmp_int, &anynul, &status);
+					x[n] = (double) tmp_int;
+				}
+				break;
+
+			case TLONG :
+				for(n=0;n<N;n++){
+					fits_read_col(fileIn, datatype, id_num, n+1, 1, 1, NULL, &tmp_long, &anynul, &status);
+					x[n] = (double) tmp_long;
+				}
+				break;
+
+			case TFLOAT :
+				for(n=0;n<N;n++){
+					fits_read_col(fileIn, datatype, id_num, n+1, 1, 1, NULL, &tmp_float, &anynul, &status);
+					x[n] = (double) tmp_float;
+				}
+				break;
+
+			case TDOUBLE :
+				for(n=0;n<N;n++){
+					fits_read_col(fileIn, datatype, id_num, n+1, 1, 1, NULL, &tmp_double, &anynul, &status);
+					x[n] = tmp_double;
+				}
+				break;
+			default :
+
+	         fprintf(stderr,"\n%s: **ERROR** format \"%d\" (see CFITSIO doc) not recognized in input file. Exiting...\n", MYNAME, datatype);
+
+	         exit(EXIT_FAILURE);
+				break;
+
+
+		}
+
+		if (status) fits_report_error(stderr, status);
+
+	return;
 }

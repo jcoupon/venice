@@ -23,4 +23,6 @@ double toDoubleLONG(void *table, long i);
 double toDoubleFLOAT(void *table, long i);
 double toDoubleDOUBLE(void *table, long i);
 
+void readColFits(fitsfile *fileIn, int id_num, long N, double *x);
+
 #endif

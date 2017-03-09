@@ -178,7 +178,7 @@ int flagCatFits(const Config *para){
     */
 
 
-   int Npolys, poly_id, flag, verbose = 1;
+   int Npolys, poly_id, flag, verbose = 1, size, firstelem=1, firstrow=1;
    double x[2], x0[2], xmin[2], xmax[2];
    size_t i, Ncol;
    long N;
@@ -205,8 +205,6 @@ int flagCatFits(const Config *para){
 			if (status) fits_report_error(stderr, status);
 	}
 
-   // fprintf(stderr,"cols: %d %d\n", xcol, ycol);
-
    fitsfile *fileOutFits;     /* pointer to the FITS file, defined in fitsio.h */
 
 
@@ -230,15 +228,16 @@ int flagCatFits(const Config *para){
       long fpixel[2], naxes[2];
       int bitpix, typecode;
       char tform_char;
+      double null = -99.0;
       double (*toDouble)(void *,long ) = NULL;
 
       /*    read fits file and put in table */
-      void *table = readFits(para,&bitpix,&typecode,&tform_char,&status,naxes,&toDouble,NULL);
+      void *table = readFits(para,&bitpix,&typecode,&tform_char,&status,naxes,&toDouble,&size);
 
       /*    define limits */
-      xmin[0] = xmin[1] = 1.0;
-      xmax[0] = naxes[0];
-      xmax[1] = naxes[1];
+      xmin[0] = xmin[1] = 0.5;
+      xmax[0] = naxes[0]+0.5;
+      xmax[1] = naxes[1]+0.5;
       if(para->minDefinied[0]) xmin[0] = para->min[0];
       if(para->maxDefinied[0]) xmax[0] = para->max[0];
       if(para->minDefinied[1]) xmin[1] = para->min[1];
@@ -247,42 +246,93 @@ int flagCatFits(const Config *para){
       fprintf(stderr,"limits:\n");
       fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
 
-
-
-      //char *ttype[] = { "flag" };
-      //char *tform[] = { concat("1", &tform_char)};
-      //char *tunit[] = { "\0" };
-
-
       fits_insert_col(fileOutFits, ncols+1, "flag",  concat("1", &tform_char), &status);
 	   if (status) fits_report_error(stderr, status);
 
+      double *xx = (double *)malloc(N*sizeof(double));
+      double *yy = (double *)malloc(N*sizeof(double));
+
+      readColFits(fileCatIn, xcol, N, xx);
+      readColFits(fileCatIn, ycol, N, yy);
+
+      for (i=0; i<N;i++){
+
+         fpixel[0] = roundToNi(xx[i]) - 1;
+         fpixel[1] = roundToNi(yy[i]) - 1;
+
+         if(xmin[0] < xx[i] && xx[i] < xmax[0] && xmin[1] < yy[i] && yy[i] < xmax[1]){
+            fits_write_col(fileOutFits, typecode, ncols+1, firstrow+i, firstelem, 1, table + (fpixel[1]*naxes[0]+fpixel[0])*size, &status);
+         }else{
+            fits_write_col(fileOutFits, typecode, ncols+1, firstrow+i, firstelem, 1, &null, &status);
+         }
+      }
+      free(xx);
+      free(yy);
+
+   }else if(checkFileExt(para->fileRegInName,".reg")){
+      FILE *fileRegIn = fopenAndCheck(para->fileRegInName,"r");
+      Node *polyTree  = readPolygonFileTree(fileRegIn,xmin,xmax);
+      Polygon *polys = (Polygon *)polyTree->polysAll;
+      Npolys          = polyTree->Npolys;
+      fclose(fileRegIn);
+
+      /*    or if the limits are defined by the user */
+      if(para->minDefinied[0]) xmin[0] = para->min[0];
+      if(para->maxDefinied[0]) xmax[0] = para->max[0];
+      if(para->minDefinied[1]) xmin[1] = para->min[1];
+      if(para->maxDefinied[1]) xmax[1] = para->max[1];
+
+      /* print out limits */
+      fprintf(stderr,"limits:\n");
+      fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
+
+      /*    reference point. It must be outside the mask */
+      x0[0] = xmin[0] - 1.0; x0[1] = xmin[1] - 1.0;
+
+      fits_insert_col(fileOutFits, ncols+1, "flag",  "1I", &status);
+	   if (status) fits_report_error(stderr, status);
+
+      double *xx = (double *)malloc(N*sizeof(double));
+      double *yy = (double *)malloc(N*sizeof(double));
+      long *rowlist = (long *)malloc(N*sizeof(long));
 
 
+      readColFits(fileCatIn, xcol, N, xx);
+      readColFits(fileCatIn, ycol, N, yy);
+
+      long count = 0;
+      for (i=0; i<N;i++){
+
+         x[0] = xx[i];
+         x[1] = yy[i];
+
+         if(flag=0,!insidePolygonTree(polyTree,x0,x,&poly_id)) flag = 1;
+         fits_write_col(fileOutFits, TSHORT, ncols+1, firstrow+i, firstelem, 1, &flag, &status);
+         if (status) fits_report_error(stderr, status);
+
+         if(para->format == 1 && !flag){
+            rowlist[count] = i+1;
+            count++;
+         }
+         if(para->format == 2 && flag){
+            rowlist[count] = i+1;
+            count++;
+         }
+      }
+
+      free(xx);
+      free(yy);
+
+      if(para->format == 1 || para->format == 2){
+         fits_delete_rowlist(fileOutFits, rowlist, count, &status);
+         fits_delete_col(fileOutFits, ncols+1, &status);
+         if (status) fits_report_error(stderr, status);
+      }
 
    }
 
-
-
-
-   // para->xcol
-
-	/* 	convert column names into column numbers if required */
-//   for(j=0;j<NIDSMAX;j++) {
-//		id_num[j] = atoi(id[j]);
-//		if(id_num[j] == 0){ /* 	if input column name is a string it will return "0" */
-//			fits_get_colnum(fileIn, CASEINSEN, id[j], &(id_num[j]), &status);
-//			if (status) fits_report_error(stderr, status);
-//		}
-//	}
-
-   /* 	get size of file and allocate data */
-
-
 	fits_close_file(fileOutFits, &status);
 	if (status) fits_report_error(stderr, status);
-
-
 
 	fits_close_file(fileCatIn, &status);
 	if (status) fits_report_error(stderr, status);
@@ -322,10 +372,12 @@ int flagCat(const Config *para){
    int ycol = atoi(para->ycol);
 
    if(checkFileExt(para->fileRegInName,".fits")){
+
       if(para->coordType != CART){
          fprintf(stderr,"%s: fits file detected. coord should be set to cart for image coordinates. Exiting...\n",MYNAME);
          exit(EXIT_FAILURE);
       }
+
 
       long fpixel[2], naxes[2];
       int bitpix, status = 0;
@@ -335,9 +387,9 @@ int flagCat(const Config *para){
       void *table = readFits(para,&bitpix,NULL,NULL,&status,naxes,&toDouble,NULL);
 
       /*    define limits */
-      xmin[0] = xmin[1] = 1.0;
-      xmax[0] = naxes[0];
-      xmax[1] = naxes[1];
+      xmin[0] = xmin[1] = 0.5;
+      xmax[0] = naxes[0]+0.5;
+      xmax[1] = naxes[1]+0.5;
       if(para->minDefinied[0]) xmin[0] = para->min[0];
       if(para->maxDefinied[0]) xmax[0] = para->max[0];
       if(para->minDefinied[1]) xmin[1] = para->min[1];
