@@ -605,8 +605,19 @@ int randomCat(const Config *para){
             fits_create_tbl(fileOutFits, BINARY_TBL, 0, tfields-1, ttype, tform, tunit, "DATA", &status);
          }
 
+         area = (xmax[0] - xmin[0])*(xmax[1] - xmin[1]);
+         fprintf(stderr, "Area = %f (pix^2)\n", area);
+
+         if(para->constDen){
+            npart =  (size_t)round((double)para->npart*area / 1.e9);
+         }else{
+            npart = para->npart;
+         }
+         fprintf(stderr,"Creates a random catalogue with N = %zd objects. Format = %d\n",npart,para->format);
+
+
          fprintf(stderr,"\nProgress =     ");
-         for(i=0;i<para->npart;i++){
+         for(i=0;i<npart;i++){
             printCount(&i,&para->npart, 1000);
             x[0] = gsl_ran_flat(r,xmin[0],xmax[0]);
             x[1] = gsl_ran_flat(r,xmin[1],xmax[1]);
