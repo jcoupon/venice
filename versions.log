@@ -1,5 +1,10 @@
 Version history
 
+v 4.0.2 - April 2017
+- exits after cfitsio error
+- some more verbose
+- Makefile added options
+
 v 4.0.1 - April 2017
 - some verbose added
 - can read heavy file in more efficient way

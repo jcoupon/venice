@@ -118,7 +118,7 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
 	 * 	See http://hea-www.harvard.edu/RD/ds9/ref/region.html
 	 */
 
-	 fprintf(stderr,"Reading region mask file..");
+	 fprintf(stderr,"Reading region mask file...");
 
 
 	char line[NFIELD*NCHAR], item[NFIELD*NCHAR],*str_begin,*str_end;

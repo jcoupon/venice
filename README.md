@@ -27,12 +27,18 @@ If the input mask is in DS9 `.reg` format, the following region types are accept
 
 ## Installation
 
-To compile it, you need to install the gsl and cfitsio libraries (http://www.gnu.org/software/gsl/, http://heasarc.gsfc.nasa.gov/fitsio/) and edit the Makefile to change the path where gsl and cfitsio is located on your machine (default: `/usr/local`).
+To compile it, you first need to install the gsl and cfitsio libraries (http://www.gnu.org/software/gsl/, http://heasarc.gsfc.nasa.gov/fitsio/).
 
 Then run:
 ```shell
 $ make
 ```
+or
+```shell
+$ make PREFIX_GSL=DIRECTORY_NAME PREFIX_CFITSIO=DIRECTORY_NAME
+```
+if gsl and cfisio libraries are installed in different directories than `/usr/local`.
+
 
 If you want to use a different compiler than gcc,
 simply edit Makefile or type (only tested with gcc and icc):

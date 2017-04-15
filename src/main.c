@@ -187,37 +187,56 @@ int flagCatFits(const Config *para){
 	int status = 0, datatype, id_num[2];
 
 	fits_open_table(&fileCatIn, para->fileCatInName, READONLY, &status);
-	if (status) fits_report_error(stderr, status);
-
+	if (status) {
+      fits_report_error(stderr, status);
+      exit(EXIT_FAILURE);
+   }
    fits_get_num_rows(fileCatIn, &N, &status);
-	if (status) fits_report_error(stderr, status);
-
+	if (status) {
+      fits_report_error(stderr, status);
+      exit(EXIT_FAILURE);
+   }
    fprintf(stderr,"Nobjects = %zd\n", N);
 
    int xcol = atoi(para->xcol);
    int ycol = atoi(para->ycol);
 	if(xcol == 0){ /* 	if input column name is a string it will return "0" */
 			fits_get_colnum(fileCatIn, CASEINSEN, para->xcol, &(xcol), &status);
-			if (status) fits_report_error(stderr, status);
-	}
+			if (status){
+            fits_report_error(stderr, status);
+            exit(EXIT_FAILURE);
+         }
+   }
 	if(ycol == 0){ /* 	if input column name is a string it will return "0" */
 			fits_get_colnum(fileCatIn, CASEINSEN, para->ycol, &(ycol), &status);
-			if (status) fits_report_error(stderr, status);
+			if (status) {
+            fits_report_error(stderr, status);
+            exit(EXIT_FAILURE);
+         }
 	}
 
    fitsfile *fileOutFits;     /* pointer to the FITS file, defined in fitsio.h */
 
-
    fits_create_file(&fileOutFits, para->fileOutName, &status);
-	if (status) fits_report_error(stderr, status);
-
+	if (status){
+      fits_report_error(stderr, status);
+      if (status){
+         fprintf(stderr, "Add \"!\" in front of the file name to overwrite: -o \"!FILEOUT\"\n");
+      }
+      exit(EXIT_FAILURE);
+   }
    fits_copy_file(fileCatIn, fileOutFits, 1, 1, 1, &status);
-	if (status) fits_report_error(stderr, status);
-
+	if (status){
+      fits_report_error(stderr, status);
+      exit(EXIT_FAILURE);
+   }
    int ncols;
 
    fits_get_num_cols(fileOutFits, &ncols, &status);
-	if (status) fits_report_error(stderr, status);
+	if (status){
+      fits_report_error(stderr, status);
+      exit(EXIT_FAILURE);
+   }
 
    if(checkFileExt(para->fileRegInName,".fits")){
       if(para->coordType != CART){
@@ -247,7 +266,10 @@ int flagCatFits(const Config *para){
       fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
 
       fits_insert_col(fileOutFits, ncols+1, "flag",  concat("1", &tform_char), &status);
-	   if (status) fits_report_error(stderr, status);
+	   if (status){
+         fits_report_error(stderr, status);
+         exit(EXIT_FAILURE);
+      }
 
       double *xx = (double *)malloc(N*sizeof(double));
       double *yy = (double *)malloc(N*sizeof(double));
@@ -255,9 +277,11 @@ int flagCatFits(const Config *para){
       readColFits(fileCatIn, xcol, N, xx);
       readColFits(fileCatIn, ycol, N, yy);
 
-      if(verbose) fprintf(stderr,"\nProgress =     ");
+      size_t N_size_t = (size_t)N;
 
+      if(verbose) fprintf(stderr,"Progress =     ");
       for (i=0; i<N;i++){
+         if(verbose) printCount(&i,&N_size_t,1000);
 
          fpixel[0] = roundToNi(xx[i]) - 1;
          fpixel[1] = roundToNi(yy[i]) - 1;
@@ -267,7 +291,9 @@ int flagCatFits(const Config *para){
          }else{
             fits_write_col(fileOutFits, typecode, ncols+1, firstrow+i, firstelem, 1, &null, &status);
          }
+
       }
+      fprintf(stderr,"\b\b\b\b100%%\n");
       free(xx);
       free(yy);
 
@@ -292,7 +318,11 @@ int flagCatFits(const Config *para){
       x0[0] = xmin[0] - 1.0; x0[1] = xmin[1] - 1.0;
 
       fits_insert_col(fileOutFits, ncols+1, "flag",  "1I", &status);
-	   if (status) fits_report_error(stderr, status);
+	   if (status) {
+         fits_report_error(stderr, status);
+         exit(EXIT_FAILURE);
+      }
+
 
       double *xx = (double *)malloc(N*sizeof(double));
       double *yy = (double *)malloc(N*sizeof(double));
@@ -302,15 +332,24 @@ int flagCatFits(const Config *para){
       readColFits(fileCatIn, xcol, N, xx);
       readColFits(fileCatIn, ycol, N, yy);
 
+      size_t N_size_t = (size_t)N;
+
+
       long count = 0;
+      if(verbose) fprintf(stderr,"Progress =     ");
       for (i=0; i<N;i++){
+
+         if(verbose) printCount(&i,&N_size_t,1000);
 
          x[0] = xx[i];
          x[1] = yy[i];
 
          if(flag=0,!insidePolygonTree(polyTree,x0,x,&poly_id)) flag = 1;
          fits_write_col(fileOutFits, TSHORT, ncols+1, firstrow+i, firstelem, 1, &flag, &status);
-         if (status) fits_report_error(stderr, status);
+         if (status){
+            fits_report_error(stderr, status);
+            exit(EXIT_FAILURE);
+         }
 
          if(para->format == 1 && !flag){
             rowlist[count] = i+1;
@@ -322,22 +361,33 @@ int flagCatFits(const Config *para){
          }
       }
 
+      fprintf(stderr,"\b\b\b\b100%%\n");
       free(xx);
       free(yy);
 
       if(para->format == 1 || para->format == 2){
          fits_delete_rowlist(fileOutFits, rowlist, count, &status);
          fits_delete_col(fileOutFits, ncols+1, &status);
-         if (status) fits_report_error(stderr, status);
+         if (status){
+            fits_report_error(stderr, status);
+            exit(EXIT_FAILURE);
+         }
+
       }
 
    }
 
 	fits_close_file(fileOutFits, &status);
-	if (status) fits_report_error(stderr, status);
+	if (status) {
+      fits_report_error(stderr, status);
+      exit(EXIT_FAILURE);
+   }
 
 	fits_close_file(fileCatIn, &status);
-	if (status) fits_report_error(stderr, status);
+	if (status) {
+      fits_report_error(stderr, status);
+      exit(EXIT_FAILURE);
+   }
 
    return EXIT_SUCCESS;
 
@@ -402,7 +452,7 @@ int flagCat(const Config *para){
 
       /*    ATTENTION "toDouble" converts everything into double */
       i = 0;
-      if(verbose) fprintf(stderr,"\nProgress =     ");
+      if(verbose) fprintf(stderr,"Progress =     ");
       while(fgets(line,NFIELD*NCHAR,fileCatIn) != NULL){
 
          /*    keep commented lines */
@@ -594,8 +644,13 @@ int randomCat(const Config *para){
          fprintf(stderr, "Outpout file or stdout format: fits\n");
 
          fits_create_file(&fileOutFits, para->fileOutName, &status);
-   		if (status) fits_report_error(stderr, status);
-
+   		if (status) {
+            fits_report_error(stderr, status);
+            if (status){
+               fprintf(stderr, "Add \"!\" in front of the file name to overwrite: -o \"!FILEOUT\"\n");
+            }
+            exit(EXIT_FAILURE);
+         }
          /*    define the name, datatype, and physical units for the columns */
          int tfields   = 4;   /* table will have 3 columns */
          char *ttype[] = { "x", "y", "flag", "z" };
@@ -618,7 +673,7 @@ int randomCat(const Config *para){
          fprintf(stderr,"Creates a random catalogue with N = %zd objects. Format = %d\n",npart,para->format);
 
 
-         fprintf(stderr,"\nProgress =     ");
+         fprintf(stderr,"Progress =     ");
          for(i=0;i<npart;i++){
             printCount(&i,&para->npart, 1000);
             x[0] = gsl_ran_flat(r,xmin[0],xmax[0]);
@@ -632,7 +687,10 @@ int randomCat(const Config *para){
                z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
                fits_write_col(fileOutFits, TDOUBLE, 4, firstrow+i, firstelem, 1, &z, &status);
             }
-            if (status) fits_report_error(stderr, status);
+            if (status) {
+               fits_report_error(stderr, status);
+               exit(EXIT_FAILURE);
+            }
          }
 
       }else{
@@ -640,7 +698,7 @@ int randomCat(const Config *para){
 
          fileOut = fopenAndCheck(para->fileOutName,"w");
          /*    ATTENTION "toDouble" converts everything into double */
-         fprintf(stderr,"\nProgress =     ");
+         fprintf(stderr,"Progress =     ");
          for(i=0;i<para->npart;i++){
             printCount(&i,&para->npart,1000);
             x[0] = gsl_ran_flat(r,xmin[0],xmax[0]);
@@ -700,7 +758,13 @@ int randomCat(const Config *para){
          fprintf(stderr, "Outpout file or stdout format: fits\n");
 
          fits_create_file(&fileOutFits, para->fileOutName, &status);
-   		if (status) fits_report_error(stderr, status);
+   		if (status){
+            fits_report_error(stderr, status);
+            if (status){
+               fprintf(stderr, "Add \"!\" in front of the file name to overwrite: -o \"!FILEOUT\"\n");
+            }
+            exit(EXIT_FAILURE);
+         }
 
          /*    define the name, datatype, and physical units for the columns */
          if(para->nz || para->zrange){
@@ -725,7 +789,10 @@ int randomCat(const Config *para){
             }
          }
 
-         if (status) fits_report_error(stderr, status);
+         if (status) {
+            fits_report_error(stderr, status);
+            exit(EXIT_FAILURE);
+         }
 
          fprintf(stderr,"Progress =     ");
          count = 0;
@@ -752,7 +819,10 @@ int randomCat(const Config *para){
                         z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
                         fits_write_col(fileOutFits, TDOUBLE, 3, firstrow+count, firstelem, 1, &z, &status);
                      }
-                     if (status) fits_report_error(stderr, status);
+                     if (status){
+                        fits_report_error(stderr, status);
+                        exit(EXIT_FAILURE);
+                     }
                      count++;
                   }
                   break;
@@ -764,7 +834,10 @@ int randomCat(const Config *para){
                         z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
                         fits_write_col(fileOutFits, TDOUBLE, 3, firstrow+count, firstelem, 1, &z, &status);
                      }
-                     if (status) fits_report_error(stderr, status);
+                     if (status) {
+                        fits_report_error(stderr, status);
+                        exit(EXIT_FAILURE);
+                     }
                      count++;
                   }
                   break;
@@ -778,7 +851,10 @@ int randomCat(const Config *para){
                   }else{
                      fits_write_col(fileOutFits, TSHORT, 3, firstrow+count, firstelem, 1, &flag, &status);
                   }
-                  if (status) fits_report_error(stderr, status);
+                  if (status){
+                     fits_report_error(stderr, status);
+                     exit(EXIT_FAILURE);
+                  }
                   count++;
                   break;
             }
@@ -867,7 +943,10 @@ int randomCat(const Config *para){
          fprintf(stderr, "Outpout file or stdout format: fits\n");
 
          fits_create_file(&fileOutFits, para->fileOutName, &status);
-   		if (status) fits_report_error(stderr, status);
+   		if (status){
+            fits_report_error(stderr, status);
+            exit(EXIT_FAILURE);
+         }
 
          /*    define the name, datatype, and physical units for the columns */
          int tfields   = 3;   /* table will have 3 columns */
@@ -904,7 +983,10 @@ int randomCat(const Config *para){
                z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
                fits_write_col(fileOutFits, TDOUBLE, 3, firstrow+i, firstelem, 1, &z, &status);
             }
-            if (status) fits_report_error(stderr, status);
+            if (status) {
+               fits_report_error(stderr, status);
+               exit(EXIT_FAILURE);
+            }
          }
 
          fprintf(stderr,"\b\b\b\b100%%\n");
@@ -955,7 +1037,10 @@ int randomCat(const Config *para){
 
    if(para->oFileType == FITS){
    	fits_close_file(fileOutFits, &status);
-   	if (status) fits_report_error(stderr, status);
+   	if (status){
+         fits_report_error(stderr, status);
+         exit(EXIT_FAILURE);
+      }
    }else{
       fclose(fileOut);
    }
