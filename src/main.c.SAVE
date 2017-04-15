@@ -243,7 +243,7 @@ int flagCatFits(const Config *para){
       if(para->minDefinied[1]) xmin[1] = para->min[1];
       if(para->maxDefinied[1]) xmax[1] = para->max[1];
       /*    print out limits */
-      fprintf(stderr,"Mask limits:\n");
+      fprintf(stderr,"limits:\n");
       fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
 
       fits_insert_col(fileOutFits, ncols+1, "flag",  concat("1", &tform_char), &status);
@@ -254,8 +254,6 @@ int flagCatFits(const Config *para){
 
       readColFits(fileCatIn, xcol, N, xx);
       readColFits(fileCatIn, ycol, N, yy);
-
-      if(verbose) fprintf(stderr,"\nProgress =     ");
 
       for (i=0; i<N;i++){
 
@@ -285,7 +283,7 @@ int flagCatFits(const Config *para){
       if(para->maxDefinied[1]) xmax[1] = para->max[1];
 
       /* print out limits */
-      fprintf(stderr,"Mask limits:\n");
+      fprintf(stderr,"limits:\n");
       fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
 
       /*    reference point. It must be outside the mask */
@@ -397,7 +395,7 @@ int flagCat(const Config *para){
       if(para->minDefinied[1]) xmin[1] = para->min[1];
       if(para->maxDefinied[1]) xmax[1] = para->max[1];
       /*    print out limits */
-      fprintf(stderr,"Mask limits:\n");
+      fprintf(stderr,"limits:\n");
       fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
 
       /*    ATTENTION "toDouble" converts everything into double */
@@ -441,7 +439,7 @@ int flagCat(const Config *para){
       if(para->minDefinied[1]) xmin[1] = para->min[1];
       if(para->maxDefinied[1]) xmax[1] = para->max[1];
       /* print out limits */
-      fprintf(stderr,"Mask limits:\n");
+      fprintf(stderr,"limits:\n");
       fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
 
       /*    reference point. It must be outside the mask */
@@ -587,7 +585,7 @@ int randomCat(const Config *para){
       if(para->maxDefinied[1]) xmax[1] = para->max[1];
 
       /*    print out limits */
-      fprintf(stderr,"Mask limits:\n");
+      fprintf(stderr,"limits:\n");
       fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
 
       if(para->oFileType == FITS){
@@ -675,7 +673,7 @@ int randomCat(const Config *para){
       if(para->minDefinied[1]) xmin[1] = para->min[1];
       if(para->maxDefinied[1]) xmax[1] = para->max[1];
       /* print out limits */
-      fprintf(stderr,"Mask limits:\n");
+      fprintf(stderr,"limits:\n");
       fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
 
       /*    reference point. It must be outside the mask */

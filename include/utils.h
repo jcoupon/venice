@@ -144,6 +144,7 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]);
 Node *createNode(Polygon *polys, size_t Npolys, double minArea, int SplitDim, double xmin[2], double xmax[2], int firstCall);
 void free_Polygon(Polygon *polygon, size_t N);
 void free_Node(Node *node);
+void cpyPolygonAddress(Polygon *a, Polygon *b);
 void cpyPolygon(Polygon *a, Polygon *b);
 
 /*

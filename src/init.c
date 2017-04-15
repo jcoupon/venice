@@ -59,7 +59,7 @@ int readParameters(int argc, char **argv, Config *para){
 		/*		help */
 		if(!strcmp(argv[i],"-h") || !strcmp(argv[i],"--help") || argc == 1){
 			fprintf(stderr,"\n\n                   V E N I C E\n\n");
-			fprintf(stderr,"           mask utility program version 4.0.0 \n\n");
+			fprintf(stderr,"           mask utility program version 4.0.1 \n\n");
 			fprintf(stderr,"Usage: %s -m mask.[reg,fits]               [OPTIONS] -> binary mask for visualization\n",argv[0]);
 			fprintf(stderr,"    or %s -m mask.[reg,fits] -cat file.cat [OPTIONS] -> objects in/out of mask\n",argv[0]);
 			fprintf(stderr,"    or %s -m mask.[reg,fits] -cat -        [OPTIONS] -> objects in/out of mask (from stdin)\n",argv[0]);

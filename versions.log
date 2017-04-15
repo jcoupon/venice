@@ -1,5 +1,10 @@
 Version history
 
+v 4.0.1 - April 2017
+- some verbose added
+- can read heavy file in more efficient way
+- bug corrected in reading box and ellipse in arcmin and deg
+
 v 4.0.0 - March 2017
 - files split in more standardised way
 - updated the doc

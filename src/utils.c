@@ -118,6 +118,9 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
 	 * 	See http://hea-www.harvard.edu/RD/ds9/ref/region.html
 	 */
 
+	 fprintf(stderr,"Reading region mask file..");
+
+
 	char line[NFIELD*NCHAR], item[NFIELD*NCHAR],*str_begin,*str_end;
 	int i,j, spherical;
 	size_t N, NpolysAll;
@@ -131,13 +134,14 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
 	Polygon *polysAll = (Polygon *)malloc(NpolysAll*sizeof(Polygon));
 	// Polygon *polysAll;
 
+	/*
 	for(i=0; i<NpolysAll; i++){
 		polysAll[i].x    = (double *)malloc(NVERTICES*sizeof(double));
 		polysAll[i].y    = (double *)malloc(NVERTICES*sizeof(double));
 		polysAll[i].xmin = (double *)malloc(2*sizeof(double));
 		polysAll[i].xmax = (double *)malloc(2*sizeof(double));
 	}
-
+	*/
 	i=0;
 	/*		Read the file and fill the array with polygons. */
 	while(fgets(line,NFIELD*NCHAR,fileIn) != NULL){
@@ -159,6 +163,12 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
 				fprintf(stderr,"%s: %zd = too many points for polygon %d (%d maxi). Exiting...\n",MYNAME,N/2,i,NVERTICES);
 				exit(EXIT_FAILURE);
 			}
+
+			polysAll[i].x    = (double *)malloc(polysAll[i].N*sizeof(double));
+			polysAll[i].y    = (double *)malloc(polysAll[i].N*sizeof(double));
+			polysAll[i].xmin = (double *)malloc(2*sizeof(double));
+			polysAll[i].xmax = (double *)malloc(2*sizeof(double));
+
 			polysAll[i].id      = i;
 			polysAll[i].xmin[0] = atof(item);
 			polysAll[i].xmax[0] = atof(item);
@@ -204,6 +214,11 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
 				r  =  atof(item+NCHAR*2);
 			}
 
+			polysAll[i].x    = (double *)malloc(polysAll[i].N*sizeof(double));
+			polysAll[i].y    = (double *)malloc(polysAll[i].N*sizeof(double));
+			polysAll[i].xmin = (double *)malloc(2*sizeof(double));
+			polysAll[i].xmax = (double *)malloc(2*sizeof(double));
+
 			polysAll[i].id      = i;
 			polysAll[i].xmin[0] = x0;
 			polysAll[i].xmax[0] = x0;
@@ -244,14 +259,27 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
 			y0 = atof(item+NCHAR*1);
 			if(strstr(item+NCHAR*2,"\"") != NULL){
 				spherical = 1;
-				rx  =  atof(item+NCHAR*2)/3600;
-				ry  =  atof(item+NCHAR*3)/3600;
+				rx  =  atof(item+NCHAR*2)/3600.0;
+				ry  =  atof(item+NCHAR*3)/3600.0;
+			}else if(strstr(item+NCHAR*2,"\'") != NULL){
+				spherical = 1;
+				rx  =  atof(item+NCHAR*2)/60.0;
+				ry  =  atof(item+NCHAR*3)/60.0;
+			}else if(strstr(item+NCHAR*2,"d") != NULL){
+				spherical = 1;
+				rx  =  atof(item+NCHAR*2);
+				ry  =  atof(item+NCHAR*3);
 			}else{
 				spherical = 0;
 				rx  =  atof(item+NCHAR*2);
 				ry  =  atof(item+NCHAR*3);
 			}
 			angle = atof(item+NCHAR*4)*PI/180.0;
+
+			polysAll[i].x    = (double *)malloc(polysAll[i].N*sizeof(double));
+			polysAll[i].y    = (double *)malloc(polysAll[i].N*sizeof(double));
+			polysAll[i].xmin = (double *)malloc(2*sizeof(double));
+			polysAll[i].xmax = (double *)malloc(2*sizeof(double));
 
 			polysAll[i].id      = i;
 			polysAll[i].xmin[0] = x0;
@@ -276,7 +304,77 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
 			}
 			i++;
 
-		}else if(strstr(line,"box") != NULL){
+		}
+
+		/*
+		else if(strstr(line,"newbox") != NULL){
+
+			str_begin = strstr(line,"(")+sizeof(char);
+			str_end = strstr(line,")");
+			strcpy(str_end,"\n\0");
+
+			getStrings(str_begin, item, ",", &N);
+
+			polysAll[i].N = 40;
+			x0 = atof(item+NCHAR*0);
+			y0 = atof(item+NCHAR*1);
+			if(strstr(item+NCHAR*2,"\"") != NULL){
+				spherical = 1;
+				rx  =  atof(item+NCHAR*2)/3600.0;
+				ry  =  atof(item+NCHAR*3)/3600.0;
+				rx  = 2.0*asin(sin(rx*PI/180.0/2.0)/cos(y0*PI/180.0))*180.0/PI;
+			}else if(strstr(item+NCHAR*2,"\'") != NULL){
+				spherical = 1;
+				rx  =  atof(item+NCHAR*2)/60.0;
+				ry  =  atof(item+NCHAR*3)/60.0;
+				rx  = 2.0*asin(sin(rx*PI/180.0/2.0)/cos(y0*PI/180.0))*180.0/PI;
+			}else if(strstr(item+NCHAR*2,"d") != NULL){
+				spherical = 1;
+				rx  =  atof(item+NCHAR*2);
+				ry  =  atof(item+NCHAR*3);
+				rx  = 2.0*asin(sin(rx*PI/180.0/2.0)/cos(y0*PI/180.0))*180.0/PI;
+			}else{
+				spherical = 0;
+				rx  =  atof(item+NCHAR*2);
+				ry  =  atof(item+NCHAR*3);
+			}
+			angle = atof(item+NCHAR*4)*PI/180.0;
+
+			polysAll[i].x    = (double *)malloc(polysAll[i].N*sizeof(double));
+			polysAll[i].y    = (double *)malloc(polysAll[i].N*sizeof(double));
+			polysAll[i].xmin = (double *)malloc(2*sizeof(double));
+			polysAll[i].xmax = (double *)malloc(2*sizeof(double));
+
+			for(j=0;j<polysAll[i].N;j++){
+				alpha            = TWOPI*(double)j/((double)polysAll[i].N);
+				x = rx*cos(alpha) + x0;
+				y = ry*sin(alpha) + y0;
+
+				if(spherical){
+					x = 2.0*asin(sin((x-x0)*PI/180/2.0)/cos(y*PI/180))*180.0/PI+x0;
+				}
+				rotate(x0, y0, x, y, &(polysAll[i].x[j]), &(polysAll[i].y[j]), angle, spherical);
+			}
+
+			polysAll[i].id      = i;
+			polysAll[i].xmin[0] = x0;
+			polysAll[i].xmax[0] = x0;
+			polysAll[i].xmin[1] = y0;
+			polysAll[i].xmax[1] = y0;
+			for(j=0;j<polysAll[i].N;j++){
+				polysAll[i].xmin[0] = MIN(polysAll[i].xmin[0], polysAll[i].x[j]);
+				polysAll[i].xmax[0] = MAX(polysAll[i].xmax[0], polysAll[i].x[j]);
+				polysAll[i].xmin[1] = MIN(polysAll[i].xmin[1], polysAll[i].y[j]);
+				polysAll[i].xmax[1] = MAX(polysAll[i].xmax[1], polysAll[i].y[j]);
+			}
+
+			//fprintf(stderr,"\nxmin = %f \nxmax = %f \nymin = %f \nymax = %f\n",polysAll[i].xmin[0],polysAll[i].xmax[0],polysAll[i].xmin[1],polysAll[i].xmax[1]);
+
+			i++;
+		}
+*/
+
+		else if(strstr(line,"box") != NULL){
 
 			str_begin = strstr(line,"(")+sizeof(char);
 			str_end = strstr(line,")");
@@ -295,13 +393,27 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
 				rx  =  atof(item+NCHAR*2)/3600;
 				ry  =  atof(item+NCHAR*3)/3600;
 				rx  = 2.0*asin(sin(rx*PI/180.0/2.0)/cos(y0*PI/180.0))*180.0/PI;
-
+			}else if(strstr(item+NCHAR*2,"\'") != NULL){
+				spherical = 1;
+				rx  =  atof(item+NCHAR*2)/60.0;
+				ry  =  atof(item+NCHAR*3)/60.0;
+				rx  = 2.0*asin(sin(rx*PI/180.0/2.0)/cos(y0*PI/180.0))*180.0/PI;
+			}else if(strstr(item+NCHAR*2,"d") != NULL){
+				spherical = 1;
+				rx  =  atof(item+NCHAR*2);
+				ry  =  atof(item+NCHAR*3);
+				rx  = 2.0*asin(sin(rx*PI/180.0/2.0)/cos(y0*PI/180.0))*180.0/PI;
 			}else{
 				spherical = 0;
 				rx  =  atof(item+NCHAR*2);
 				ry  =  atof(item+NCHAR*3);
 			}
 			angle = atof(item+NCHAR*4)*PI/180.0;
+
+			polysAll[i].x    = (double *)malloc(polysAll[i].N*sizeof(double));
+			polysAll[i].y    = (double *)malloc(polysAll[i].N*sizeof(double));
+			polysAll[i].xmin = (double *)malloc(2*sizeof(double));
+			polysAll[i].xmax = (double *)malloc(2*sizeof(double));
 
 			rotate(x0, y0, +rx/2.0+x0, +ry/2.0+y0, &(polysAll[i].x[0]), &(polysAll[i].y[0]), angle, spherical);
 			rotate(x0, y0, -rx/2.0+x0, +ry/2.0+y0, &(polysAll[i].x[1]), &(polysAll[i].y[1]), angle, spherical);
@@ -319,8 +431,13 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
 				polysAll[i].xmin[1] = MIN(polysAll[i].xmin[1], polysAll[i].y[j]);
 				polysAll[i].xmax[1] = MAX(polysAll[i].xmax[1], polysAll[i].y[j]);
 			}
+
+			//fprintf(stderr,"\nxmin = %f \nxmax = %f \nymin = %f \nymax = %f\n",polysAll[i].xmin[0],polysAll[i].xmax[0],polysAll[i].xmin[1],polysAll[i].xmax[1]);
+
 			i++;
 		}
+
+
 
 	}
 	if(i==0){
@@ -335,13 +452,26 @@ Node *readPolygonFileTree(FILE *fileIn, double xmin[2], double xmax[2]){
 	xmax[0] = polysAll[0].xmax[0];
 	xmin[1] = polysAll[0].xmin[1];
 	xmax[1] = polysAll[0].xmax[1];
-	minArea = (polysAll[0].xmax[0] - polysAll[0].xmin[0])*(polysAll[0].xmax[1] - polysAll[0].xmin[1]);
+
+	//fprintf(stderr,"xmin = %f \nxmax = %f \nymin = %f \nymax = %f\n",xmin[0],xmax[0],xmin[1],xmax[1]);
+	if(0){
+		minArea = (polysAll[0].xmax[0] - polysAll[0].xmin[0])*(sin(polysAll[0].xmax[1]*PI/180.0) - sin(polysAll[0].xmin[1]*PI/180.0))*180.0/PI;
+	}else{
+		minArea = (polysAll[0].xmax[0] - polysAll[0].xmin[0])*(polysAll[0].xmax[1] - polysAll[0].xmin[1]);
+	}
+
 	for(i=1;i<NpolysAll;i++){
 		xmin[0] = MIN(xmin[0],polysAll[i].xmin[0]);
 		xmax[0] = MAX(xmax[0],polysAll[i].xmax[0]);
 		xmin[1] = MIN(xmin[1],polysAll[i].xmin[1]);
 		xmax[1] = MAX(xmax[1],polysAll[i].xmax[1]);
-		minArea += (polysAll[i].xmax[0] - polysAll[i].xmin[0])*(polysAll[i].xmax[1] - polysAll[i].xmin[1]);
+		if(0){
+			minArea += (polysAll[i].xmax[0] - polysAll[i].xmin[0])*(sin(polysAll[i].xmax[1]*PI/180.0) - sin(polysAll[i].xmin[1]*PI/180.0))*180.0/PI;
+		}else{
+			minArea += (polysAll[i].xmax[0] - polysAll[i].xmin[0])*(polysAll[i].xmax[1] - polysAll[i].xmin[1]);
+		}
+
+
 	}
 	minArea /= 1.0*(double)NpolysAll;
 
@@ -357,12 +487,19 @@ Node *createNode(Polygon *polys, size_t Npolys, double minArea, int SplitDim, do
 	static size_t countNodes, NpolysAll;
 	static void   *root, *polysAll;
 
+	Polygon *polysChild;
+
 	/* 	Root & node id */
 	if(firstCall){
+		fprintf(stderr,"Building region mask tree...");
+
 		root         = result;
 		countNodes   = 0;
 		polysAll     = polys;
 		NpolysAll    = Npolys;
+
+
+
 	}
 	result->root      = root;
 	result->id        = countNodes;
@@ -379,7 +516,15 @@ Node *createNode(Polygon *polys, size_t Npolys, double minArea, int SplitDim, do
 		result->poly_id[i] = polys[i].id;
 	}
 
-	double area = (xmax[0]-xmin[0])*(xmax[1]-xmin[1]);
+	double area;
+	if(0){
+		area = (xmax[0] - xmin[0])*(sin(xmax[1]*PI/180.0) - sin(xmin[1]*PI/180.0))*180.0/PI;
+	}else{
+		area = (xmax[0] - xmin[0])*(xmax[1] - xmin[1]);
+	}
+
+
+	//double area = (xmax[0]-xmin[0])*(xmax[1]-xmin[1]);
 	/* 	Leaf: either no polygon or cell smaller than minArea */
 	if(result->Npolys == 0 || area < minArea) {
 		result->type     = LEAF;
@@ -391,13 +536,13 @@ Node *createNode(Polygon *polys, size_t Npolys, double minArea, int SplitDim, do
 		result->SplitValue = (xmax[result->SplitDim] + xmin[result->SplitDim])/2.0;
 
 		/* 	Temporary data */
-		Polygon *polysChild = (Polygon *)malloc(Npolys*sizeof(Polygon));
-		for(i=0; i<Npolys; i++){
-			polysChild[i].x    = (double *)malloc(NVERTICES*sizeof(double));
-			polysChild[i].y    = (double *)malloc(NVERTICES*sizeof(double));
-			polysChild[i].xmin = (double *)malloc(2*sizeof(double));
-			polysChild[i].xmax = (double *)malloc(2*sizeof(double));
-		}
+		polysChild = (Polygon *)malloc(Npolys*sizeof(Polygon));
+		//for(i=0; i<Npolys; i++){
+		//	polysChild[i].x    = (double *)malloc(NVERTICES*sizeof(double));
+		//	polysChild[i].y    = (double *)malloc(NVERTICES*sizeof(double));
+		//	polysChild[i].xmin = (double *)malloc(2*sizeof(double));
+		//	polysChild[i].xmax = (double *)malloc(2*sizeof(double));
+		//}
 
 		double xminChild[2], xmaxChild[2];
 		for(i=0;i<2;i++){
@@ -416,11 +561,17 @@ Node *createNode(Polygon *polys, size_t Npolys, double minArea, int SplitDim, do
 		j=0;
 		for(i=0;i<Npolys;i++){
 			if(polys[i].xmin[result->SplitDim] < result->SplitValue){
-				cpyPolygon(&polysChild[j],&polys[i]);
+				cpyPolygonAddress(&polysChild[j],&polys[i]);
 				j++;
 			}
 		}
 		result->Left = createNode(polysChild,j,minArea,SplitDim,xminChild,xmaxChild,0);
+		free(polysChild);
+
+		/* 	Temporary data */
+		polysChild = (Polygon *)malloc(Npolys*sizeof(Polygon));
+
+
 
 		/*		"right" */
 
@@ -430,16 +581,25 @@ Node *createNode(Polygon *polys, size_t Npolys, double minArea, int SplitDim, do
 		j=0;
 		for(i=0;i<Npolys;i++){
 			if(polys[i].xmax[result->SplitDim] > result->SplitValue){
-				cpyPolygon(&polysChild[j],&polys[i]);
+				cpyPolygonAddress(&polysChild[j],&polys[i]);
 				j++;
 			}
 		}
 		result->Right = createNode(polysChild,j,minArea,SplitDim,xminChild,xmaxChild,0);
 
-		free_Polygon(polysChild,Npolys);
+		free(polysChild);
+
+		//free_Polygon(polysChild,Npolys);
 	}
 
 	result->Nnodes=countNodes;
+
+	if (firstCall){
+
+		fprintf(stderr,"Done.\n");
+
+	}
+
 
 	return result;
 }
@@ -464,6 +624,21 @@ void free_Node(Node *node){
 	free(node);
 	return;
 }
+
+
+void cpyPolygonAddress(Polygon *a, Polygon *b){
+	/*		Copies b into a	*/
+	size_t i;
+
+	a->N  = b->N;
+	a->id = b->id;
+
+	a->x = b->x;
+	a->y = b->y;
+	a->xmin = b->xmin;
+	a->xmax = b->xmax;
+}
+
 
 void cpyPolygon(Polygon *a, Polygon *b){
 	/*		Copies b into a	*/
