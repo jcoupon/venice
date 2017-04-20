@@ -265,7 +265,7 @@ int flagCatFits(const Config *para){
       fprintf(stderr,"Mask limits:\n");
       fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
 
-      fits_insert_col(fileOutFits, ncols+1, "flag",  concat("1", &tform_char), &status);
+      fits_insert_col(fileOutFits, ncols+1, para->flagName,  concat("1", &tform_char), &status);
 	   if (status){
          fits_report_error(stderr, status);
          exit(EXIT_FAILURE);
@@ -317,7 +317,7 @@ int flagCatFits(const Config *para){
       /*    reference point. It must be outside the mask */
       x0[0] = xmin[0] - 1.0; x0[1] = xmin[1] - 1.0;
 
-      fits_insert_col(fileOutFits, ncols+1, "flag",  "1I", &status);
+      fits_insert_col(fileOutFits, ncols+1, para->flagName,  "1I", &status);
 	   if (status) {
          fits_report_error(stderr, status);
          exit(EXIT_FAILURE);
@@ -653,7 +653,7 @@ int randomCat(const Config *para){
          }
          /*    define the name, datatype, and physical units for the columns */
          int tfields   = 4;   /* table will have 3 columns */
-         char *ttype[] = { "x", "y", "flag", "z" };
+         char *ttype[] = { "x", "y", para->flagName, "z" };
          char *tform[] = { "1D", "1D", concat("1", &tform_char), "1D"};
          char *tunit[] = { "pix", "pix", "\0", "\0" };
          if(para->nz || para->zrange){
@@ -769,7 +769,7 @@ int randomCat(const Config *para){
          /*    define the name, datatype, and physical units for the columns */
          if(para->nz || para->zrange){
             int tfields   = 4;   /* table will have 3 or 4 columns */
-            char *ttype[] = { "ra", "dec", "z", "flag" };
+            char *ttype[] = { "ra", "dec", "z", para->flagName};
             char *tform[] = { "1D", "1D", "1D", "1I"};
             char *tunit[] = { "deg", "deg", "\0", "\0" };
             if (para->format == 1 || para->format == 2) {
@@ -779,7 +779,7 @@ int randomCat(const Config *para){
             }
          }else{
             int tfields   = 3;   /* table will have 2 or 3 columns */
-            char *ttype[] = { "ra", "dec", "flag" };
+            char *ttype[] = { "ra", "dec", para->flagName };
             char *tform[] = { "1D", "1D", "1I"};
             char *tunit[] = { "deg", "deg", "\0" };
             if (para->format == 1 || para->format == 2) {

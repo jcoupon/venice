@@ -34,6 +34,7 @@ int readParameters(int argc, char **argv, Config *para){
 	para->catFileType = FITS;
 	para->oFileType = FITS;
 
+
 	/* 	default cosmology <=> WMAP5 */
 	/*		TODO: add it as an option */
 	para->a[0] = H0;
@@ -54,12 +55,15 @@ int readParameters(int argc, char **argv, Config *para){
 	strcpy(para->fileCatInName,"\0");
 	strcpy(para->fileRegInName,"\0");
 	strcpy(para->fileNofZName,"\0");
+	strcpy(para->flagName,"flag");
+
+
 
 	for(i=0;i<argc;i++){
 		/*		help */
 		if(!strcmp(argv[i],"-h") || !strcmp(argv[i],"--help") || argc == 1){
 			fprintf(stderr,"\n\n                   V E N I C E\n\n");
-			fprintf(stderr,"           mask utility program version 4.0.1 \n\n");
+			fprintf(stderr,"           mask utility program version 4.0.3 \n\n");
 			fprintf(stderr,"Usage: %s -m mask.[reg,fits]               [OPTIONS] -> binary mask for visualization\n",argv[0]);
 			fprintf(stderr,"    or %s -m mask.[reg,fits] -cat file.cat [OPTIONS] -> objects in/out of mask\n",argv[0]);
 			fprintf(stderr,"    or %s -m mask.[reg,fits] -cat -        [OPTIONS] -> objects in/out of mask (from stdin)\n",argv[0]);
@@ -81,6 +85,7 @@ int readParameters(int argc, char **argv, Config *para){
 			fprintf(stderr,"    -seed  N                 random seed\n");
 			fprintf(stderr,"    -npart N                 number of random objects\n");
 			fprintf(stderr,"    -cd                      multiply npart by the mask area (for constant density)\n");
+			fprintf(stderr,"    -flagName NAME           name of the flag colum for fits files: flag\n");
 			fprintf(stderr,"    -h, --help               this message\n\n");
 			fprintf(stderr,"For .reg files, the region must be \"polygon\", \"circle\", \"ellipse\" or \"box\".\n");
 			fprintf(stderr,"Notice: 0 means inside the mask, 1 outside; for .fits files,\n");
@@ -269,7 +274,23 @@ int readParameters(int argc, char **argv, Config *para){
 				para->oFileType = FITS;
 			}
 		}
+
+		/*		output file */
+		if(!strcmp(argv[i],"-flagName")){
+			if(argv[i+1] == NULL){
+				fprintf(stderr,"Missing argument after %s\nExiting...\n",argv[i]);
+				exit(-1);
+			}
+			strcpy(para->flagName,argv[i+1]);
+		}
+
+
+
 	}
+
+
+
+
 	/* 	if no mask file is provided */
 	if (nomask){
 		/*		check if all the limits are definied in this case; */

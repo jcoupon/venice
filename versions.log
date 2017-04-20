@@ -1,5 +1,9 @@
 Version history
 
+v 4.0.3 - April 2017
+- allows to set a different name for the flag
+in the fits output files
+
 v 4.0.2 - April 2017
 - exits after cfitsio error
 - some more verbose

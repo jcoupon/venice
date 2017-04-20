@@ -77,6 +77,7 @@
 
 typedef struct Config
 {
+	char flagName[1000];
 	char fileRegInName[1000];
 	char fileCatInName[1000];
 	char fileOutName[1000];
