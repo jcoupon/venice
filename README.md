@@ -71,6 +71,7 @@ Options:
     -seed  N                 random seed
     -npart N                 number of random objects
     -cd                      multiply npart by the mask area (for constant density)
+    -flagName NAME           name of the flag colum for fits files. default: flag
     -h, --help               this message
 ```
 
@@ -160,6 +161,7 @@ Options:
 - `-xmax value`: the maximum coordinate in the x direction.
 - `-ymin value`: the minimum coordinate in the y direction.
 - `-ymax value`: the maximum coordinate in the y direction.
+- `-flagName NAME`: for output fits file, the name of the flag column
 
 Example:
 How to create a new catalogue newcat.cat with a mask file named mask[.reg,.fits]

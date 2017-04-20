@@ -85,7 +85,7 @@ int readParameters(int argc, char **argv, Config *para){
 			fprintf(stderr,"    -seed  N                 random seed\n");
 			fprintf(stderr,"    -npart N                 number of random objects\n");
 			fprintf(stderr,"    -cd                      multiply npart by the mask area (for constant density)\n");
-			fprintf(stderr,"    -flagName NAME           name of the flag colum for fits files: flag\n");
+			fprintf(stderr,"    -flagName NAME           name of the flag colum for fits files. default: flag\n");
 			fprintf(stderr,"    -h, --help               this message\n\n");
 			fprintf(stderr,"For .reg files, the region must be \"polygon\", \"circle\", \"ellipse\" or \"box\".\n");
 			fprintf(stderr,"Notice: 0 means inside the mask, 1 outside; for .fits files,\n");
