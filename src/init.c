@@ -42,9 +42,9 @@ int readParameters(int argc, char **argv, Config *para){
 	para->a[2] = Omega_L;
 	para->a[3] = c;
 
-	for(i=0;i<2;i++){
-		para->minDefinied[i] = 0;
-		para->maxDefinied[i] = 0;
+	for(i=0;i<3;i++){
+		para->minDefined[i] = 0;
+		para->maxDefined[i] = 0;
 		para->min[i] = 0.0;
 		para->max[i] = 0.0;
 	}
@@ -63,7 +63,7 @@ int readParameters(int argc, char **argv, Config *para){
 		/*		help */
 		if(!strcmp(argv[i],"-h") || !strcmp(argv[i],"--help") || argc == 1){
 			fprintf(stderr,"\n\n                   V E N I C E\n\n");
-			fprintf(stderr,"           mask utility program version 4.0.3 \n\n");
+			fprintf(stderr,"           mask utility program version 4.0.4 \n\n");
 			fprintf(stderr,"Usage: %s -m mask.[reg,fits]               [OPTIONS] -> binary mask for visualization\n",argv[0]);
 			fprintf(stderr,"    or %s -m mask.[reg,fits] -cat file.cat [OPTIONS] -> objects in/out of mask\n",argv[0]);
 			fprintf(stderr,"    or %s -m mask.[reg,fits] -cat -        [OPTIONS] -> objects in/out of mask (from stdin)\n",argv[0]);
@@ -78,10 +78,10 @@ int readParameters(int argc, char **argv, Config *para){
 			fprintf(stderr,"    -[x,y]col N              column id for x and y (starts at 1)\n");
 			fprintf(stderr,"                             One may use column names for input fits catalogue\n");
 			fprintf(stderr,"    -coord [cart,spher]      coordinate type, default:cart\n");
-			fprintf(stderr,"    -[x,y]min value          lower limit for x and y\n");
-			fprintf(stderr,"    -[x,y]max value          upper limit for x and y\n");
+			fprintf(stderr,"    -[x,y,z]min value        lower limit for x, y and z (z coordinate, not redshift)\n");
+			fprintf(stderr,"    -[x,y,z]max value        upper limit for x, y and z (z coordinate, not redshift)\n");
 			fprintf(stderr,"    -nz file_nz.in           redshift distribution for random objects\n");
-			fprintf(stderr,"    -z zmin,zmax             redshift range for random objects (if volume limited)\n");
+			fprintf(stderr,"    -z redshiftmin,redshiftmax             redshift range for random objects (if volume limited)\n");
 			fprintf(stderr,"    -seed  N                 random seed\n");
 			fprintf(stderr,"    -npart N                 number of random objects\n");
 			fprintf(stderr,"    -cd                      multiply npart by the mask area (for constant density)\n");
@@ -182,7 +182,7 @@ int readParameters(int argc, char **argv, Config *para){
 				fprintf(stderr,"Missing argument after %s\nExiting...\n",argv[i]);
 				exit(-1);
 			}
-			para->minDefinied[0] = 1;
+			para->minDefined[0] = 1;
 			para->min[0] = atof(argv[i+1]);
 		}
 		if(!strcmp(argv[i],"-xmax")){
@@ -190,7 +190,7 @@ int readParameters(int argc, char **argv, Config *para){
 				fprintf(stderr,"Missing argument after %s\nExiting...\n",argv[i]);
 				exit(-1);
 			}
-			para->maxDefinied[0] = 1;
+			para->maxDefined[0] = 1;
 			para->max[0] = atof(argv[i+1]);
 		}
 		if(!strcmp(argv[i],"-ymin")){
@@ -198,7 +198,7 @@ int readParameters(int argc, char **argv, Config *para){
 				fprintf(stderr,"Missing argument after %s\nExiting...\n",argv[i]);
 				exit(-1);
 			}
-			para->minDefinied[1] = 1;
+			para->minDefined[1] = 1;
 			para->min[1] = atof(argv[i+1]);
 		}
 		if(!strcmp(argv[i],"-ymax")){
@@ -206,8 +206,24 @@ int readParameters(int argc, char **argv, Config *para){
 				fprintf(stderr,"Missing argument after %s\nExiting...\n",argv[i]);
 				exit(-1);
 			}
-			para->maxDefinied[1] = 1;
+			para->maxDefined[1] = 1;
 			para->max[1] = atof(argv[i+1]);
+		}
+		if(!strcmp(argv[i],"-zmin")){
+			if(argv[i+1] == NULL){
+				fprintf(stderr,"Missing argument after %s\nExiting...\n",argv[i]);
+				exit(-1);
+			}
+			para->minDefined[2] = 1;
+			para->min[2] = atof(argv[i+1]);
+		}
+		if(!strcmp(argv[i],"-zmax")){
+			if(argv[i+1] == NULL){
+				fprintf(stderr,"Missing argument after %s\nExiting...\n",argv[i]);
+				exit(-1);
+			}
+			para->maxDefined[2] = 1;
+			para->max[2] = atof(argv[i+1]);
 		}
 		/*		input catalogue (if -cat set) */
 		if(!strcmp(argv[i],"-nz")){
@@ -228,10 +244,10 @@ int readParameters(int argc, char **argv, Config *para){
 				exit(-1);
 			}
 			getStrings(argv[i+1],list,",",&Ncol);
-			para->zmin = getDoubleValue(list,1);
-			para->zmax = getDoubleValue(list,2);
-			if(para->zmax < para->zmin){
-				fprintf(stderr,"zmin must be lower than zmax...Exiting...\n");
+			para->redshiftmin = getDoubleValue(list,1);
+			para->redshiftmax = getDoubleValue(list,2);
+			if(para->redshiftmax < para->redshiftmin){
+				fprintf(stderr,"redshiftmin must be lower than redshiftmax...Exiting...\n");
 				exit(-1);
 			}
 			if(para->nz == 1){
@@ -290,11 +306,10 @@ int readParameters(int argc, char **argv, Config *para){
 
 
 
-
 	/* 	if no mask file is provided */
 	if (nomask){
-		/*		check if all the limits are definied in this case; */
-		if(task == 3 && (para->minDefinied[0] + para->minDefinied[1] + para->maxDefinied[0] + para->maxDefinied[1] < 4)) {
+		/*		check if all the limits are Defined in this case; */
+		if(task == 3 && (para->minDefined[0] + para->minDefined[1] + para->maxDefined[0] + para->maxDefined[1] < 4)) {
 			fprintf(stderr,"If you want to generate a random catalogue with no mask,\n");
 			fprintf(stderr,"please provide all the coordinate limits:\n");
 			fprintf(stderr,"%s -r -xmin value -xmax value -ymin value -ymax value [OPTIONS]\n",argv[0]);
@@ -336,6 +351,15 @@ int readParameters(int argc, char **argv, Config *para){
 		}
 	}
 
+	if((para->minDefined[2] == 1 && para->maxDefined[2] == 0) || (para->minDefined[2] == 1 && para->maxDefined[2] == 0)){
+		fprintf(stderr,"The zmin and zmax attributes must be set together. Existing...\n");
+		exit(EXIT_FAILURE);
+	}
+
+
+	if((para->nz || para->zrange) && (para->minDefined[2] && para->maxDefined[2]) ){
+		fprintf(stderr,"The z (redshift) and zmin/zmax attributes cannot be set simultaneously. Exiting...\n");
+	}
 
 	return task;
 }

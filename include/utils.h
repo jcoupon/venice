@@ -38,7 +38,7 @@
 #define G     6.67300e-11
 
 /* 	WMAP5 Cosmology */
-#define H0 72 /* 	all values definied with h = 0.72 */
+#define H0 72 /* 	all values Defined with h = 0.72 */
 #define Omega_M 0.258
 #define Omega_L 0.742
 
@@ -87,9 +87,9 @@ typedef struct Config
 	char *xcol,*ycol;
 	int coordType, constDen;
 	size_t npart,seed;
-	double min[2], max[2], zmin, zmax;
-	int minDefinied[2];
-	int maxDefinied[2];
+	double min[3], max[3], redshiftmin, redshiftmax;
+	int minDefined[3];
+	int maxDefined[3];
 
 	int catFileType, oFileType;
 

@@ -64,10 +64,10 @@ Options:
     -f [outside,inside,all]  output format, default:outside
     -[x,y]col N              column id for x and y (starts at 1)
     -coord [cart,spher]      coordinate type, default:cart
-    -[x,y]min value          lower limit for x and y
-    -[x,y]max value          upper limit for x and y
+    -[x,y,z]min value        lower limit for x, y and z (z coordinate, not redshift)
+    -[x,y,z]max value        upper liimit for x, y and z (z coordinate, not redshift)
     -nz file_nz.in           redshift distribution for random objects
-    -z zmin,zmax             redshift range for random objects (if volume limited)
+    -z redshiftmin,redhsiftmax    redshift range for random objects (if volume limited)
     -seed  N                 random seed
     -npart N                 number of random objects
     -cd                      multiply npart by the mask area (for constant density)
@@ -104,7 +104,10 @@ Command-line options:
 - `-xmin value`: the minimum coordinate in the x direction.
 - `-xmax value`: the maximum coordinate in the x direction.
 - `-ymin value`: the minimum coordinate in the y direction.
-- `-ymax value`: the maximum coordinate in the y direction. The default value for the coordinates limits are definied by the mask limits.
+- `-ymax value`: the maximum coordinate in the y direction.
+- `-zmin value`: the minimum coordinate in the z direction (works only is redshift range is not defined).
+- `-zmax value`: the maximum coordinate in the z direction (works only is redshift range is not defined).
+The default value for the coordinates limits are defined by the mask limits.
 
 Example:
 How to create a pixelized (10 X 10 pixels) mask with a mask file named mask[.reg,.fits] and put the results in pixel_mask.out:
@@ -202,7 +205,7 @@ Options:
 - `-nz file_nz`: to provide a file with the redshift distribution from which the random objects will be drawn. Note: if the binning is too small, this will "kill" the large scale power along the line of sight direction
 - `-z zmin,zmax`: to have the random point number follow the volume size between zmin and zmax. This garantee a constant density as function of redshift. If the data sample is volume limited, this is the right option to use (instead of `-nz`).
 
-The default value for the coordinates limits are definied by the mask limits. If you don't provide a mask (so if you only want a random catalogue with no mask), you have to define all of these values.
+The default value for the coordinates limits are defined by the mask limits. If you don't provide a mask (so if you only want a random catalogue with no mask), you have to define all of these values.
 
 IMPORTANT: `npart` is the number of DRAWN objects, then if the mask is not empty the number of objects "outside" will be < npart. Tip: the ratio n_outside/npart is the unmasked area of your field (=1 if no mask).
 

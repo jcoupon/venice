@@ -16,7 +16,6 @@
  *    TODO:
  *    - adapt to be used with python
  *    - use RA DEC as input even with fits masks (use wcs functions)
- *    - correct "Definied" typos
  *    - allow different input and output files
  */
 
@@ -86,10 +85,10 @@ int  mask2d(const Config *para){
       xmin[0] = xmin[1] = 1.0;
       xmax[0] = naxes[0];
       xmax[1] = naxes[1];
-      if(para->minDefinied[0]) xmin[0] = para->min[0];
-      if(para->maxDefinied[0]) xmax[0] = para->max[0];
-      if(para->minDefinied[1]) xmin[1] = para->min[1];
-      if(para->maxDefinied[1]) xmax[1] = para->max[1];
+      if(para->minDefined[0]) xmin[0] = para->min[0];
+      if(para->maxDefined[0]) xmax[0] = para->max[0];
+      if(para->minDefined[1]) xmin[1] = para->min[1];
+      if(para->maxDefined[1]) xmax[1] = para->max[1];
       /*    print out limits */
       fprintf(stderr,"limits:\n");
       fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
@@ -122,10 +121,10 @@ int  mask2d(const Config *para){
       fclose(fileRegIn);
 
       /*    define limits */
-      if(para->minDefinied[0]) xmin[0] = para->min[0];
-      if(para->maxDefinied[0]) xmax[0] = para->max[0];
-      if(para->minDefinied[1]) xmin[1] = para->min[1];
-      if(para->maxDefinied[1]) xmax[1] = para->max[1];
+      if(para->minDefined[0]) xmin[0] = para->min[0];
+      if(para->maxDefined[0]) xmax[0] = para->max[0];
+      if(para->minDefined[1]) xmin[1] = para->min[1];
+      if(para->maxDefined[1]) xmax[1] = para->max[1];
       /*    print out limits */
       fprintf(stderr,"limits:\n");
       fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
@@ -257,10 +256,10 @@ int flagCatFits(const Config *para){
       xmin[0] = xmin[1] = 0.5;
       xmax[0] = naxes[0]+0.5;
       xmax[1] = naxes[1]+0.5;
-      if(para->minDefinied[0]) xmin[0] = para->min[0];
-      if(para->maxDefinied[0]) xmax[0] = para->max[0];
-      if(para->minDefinied[1]) xmin[1] = para->min[1];
-      if(para->maxDefinied[1]) xmax[1] = para->max[1];
+      if(para->minDefined[0]) xmin[0] = para->min[0];
+      if(para->maxDefined[0]) xmax[0] = para->max[0];
+      if(para->minDefined[1]) xmin[1] = para->min[1];
+      if(para->maxDefined[1]) xmax[1] = para->max[1];
       /*    print out limits */
       fprintf(stderr,"Mask limits:\n");
       fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
@@ -305,10 +304,10 @@ int flagCatFits(const Config *para){
       fclose(fileRegIn);
 
       /*    or if the limits are defined by the user */
-      if(para->minDefinied[0]) xmin[0] = para->min[0];
-      if(para->maxDefinied[0]) xmax[0] = para->max[0];
-      if(para->minDefinied[1]) xmin[1] = para->min[1];
-      if(para->maxDefinied[1]) xmax[1] = para->max[1];
+      if(para->minDefined[0]) xmin[0] = para->min[0];
+      if(para->maxDefined[0]) xmax[0] = para->max[0];
+      if(para->minDefined[1]) xmin[1] = para->min[1];
+      if(para->maxDefined[1]) xmax[1] = para->max[1];
 
       /* print out limits */
       fprintf(stderr,"Mask limits:\n");
@@ -404,7 +403,7 @@ int flagCat(const Config *para){
 
    int Npolys, poly_id, flag, verbose = 1;
    size_t i,N, Ncol;
-   double x[2], x0[2], xmin[2], xmax[2];
+   double x[3], x0[3], xmin[3], xmax[3];
    char line[NFIELD*NCHAR], item[NFIELD*NCHAR],*str_end;
 
    FILE *fileOut   = fopenAndCheck(para->fileOutName,"w");
@@ -442,10 +441,10 @@ int flagCat(const Config *para){
       xmin[0] = xmin[1] = 0.5;
       xmax[0] = naxes[0]+0.5;
       xmax[1] = naxes[1]+0.5;
-      if(para->minDefinied[0]) xmin[0] = para->min[0];
-      if(para->maxDefinied[0]) xmax[0] = para->max[0];
-      if(para->minDefinied[1]) xmin[1] = para->min[1];
-      if(para->maxDefinied[1]) xmax[1] = para->max[1];
+      if(para->minDefined[0]) xmin[0] = para->min[0];
+      if(para->maxDefined[0]) xmax[0] = para->max[0];
+      if(para->minDefined[1]) xmin[1] = para->min[1];
+      if(para->maxDefined[1]) xmax[1] = para->max[1];
       /*    print out limits */
       fprintf(stderr,"Mask limits:\n");
       fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
@@ -486,10 +485,10 @@ int flagCat(const Config *para){
       fclose(fileRegIn);
 
       /*    or if the limits are defined by the user */
-      if(para->minDefinied[0]) xmin[0] = para->min[0];
-      if(para->maxDefinied[0]) xmax[0] = para->max[0];
-      if(para->minDefinied[1]) xmin[1] = para->min[1];
-      if(para->maxDefinied[1]) xmax[1] = para->max[1];
+      if(para->minDefined[0]) xmin[0] = para->min[0];
+      if(para->maxDefined[0]) xmax[0] = para->max[0];
+      if(para->minDefined[1]) xmin[1] = para->min[1];
+      if(para->maxDefined[1]) xmax[1] = para->max[1];
       /* print out limits */
       fprintf(stderr,"Mask limits:\n");
       fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
@@ -515,10 +514,10 @@ int flagCat(const Config *para){
             str_end = strstr(line,"\n");/*   cariage return to the end of the line */
             strcpy(str_end,"\0");       /*   "end" symbol to the line */
             switch (para->format){
-               case 1: /*  only objects outside the mask and inside the user's definied limits */
+               case 1: /*  only objects outside the mask and inside the user's Defined limits */
                if(flag) fprintf(fileOut,"%s\n",line);
                break;
-               case 2: /*  only objects inside the mask or outside the user's definied limits */
+               case 2: /*  only objects inside the mask or outside the user's Defined limits */
                if(!flag) fprintf(fileOut,"%s\n",line);
                break;
                case 3: /*  all objects with the flag */
@@ -552,12 +551,11 @@ int randomCat(const Config *para){
    long firstrow =1, firstelem = 1;
 
    size_t i, npart;
-   double x[2], x0[2], xmin[2], xmax[2], z, area;
+   double x[3], x0[3], xmin[3], xmax[3], z, area;
    gsl_rng *r = randomInitialize(para->seed);
 
    FILE *fileOut;             /* pointer to the ascii file */
    fitsfile *fileOutFits;     /* pointer to the FITS file, defined in fitsio.h */
-
 
    /*    redshift distribution
     *    GSL convention: bin[i] corresponds to range[i] <= x < range[i+1]
@@ -596,17 +594,17 @@ int randomCat(const Config *para){
 
    if(para->zrange){
       Nbins= 1000;
-      double delta = (para->zmax - para->zmin)/(double)Nbins;
+      double delta = (para->redshiftmax - para->redshiftmin)/(double)Nbins;
 
       nz     = gsl_histogram_alloc(Nbins);
       nz_PDF = gsl_histogram_pdf_alloc (Nbins);
 
       for(i=0;i<Nbins;i++){
-         nz->range[i] = para->zmin + delta*(double)i;
+         nz->range[i] = para->redshiftmin + delta*(double)i;
          nz->bin[i]   = dvdz(nz->range[i] + delta/2.0, para->a);
       }
       /*    gsl structure requires an upper limit for the last bin*/
-      nz->range[Nbins]   = para->zmin + delta*(double)Nbins;
+      nz->range[Nbins]   = para->redshiftmin + delta*(double)Nbins;
       gsl_histogram_pdf_init (nz_PDF, nz);
    }
 
@@ -631,10 +629,10 @@ int randomCat(const Config *para){
       xmin[0] = xmin[1] = 0.5;
       xmax[0] = naxes[0]+0.5;
       xmax[1] = naxes[1]+0.5;
-      if(para->minDefinied[0]) xmin[0] = para->min[0];
-      if(para->maxDefinied[0]) xmax[0] = para->max[0];
-      if(para->minDefinied[1]) xmin[1] = para->min[1];
-      if(para->maxDefinied[1]) xmax[1] = para->max[1];
+      if(para->minDefined[0]) xmin[0] = para->min[0];
+      if(para->maxDefined[0]) xmax[0] = para->max[0];
+      if(para->minDefined[1]) xmin[1] = para->min[1];
+      if(para->maxDefined[1]) xmax[1] = para->max[1];
 
       /*    print out limits */
       fprintf(stderr,"Mask limits:\n");
@@ -728,10 +726,10 @@ int randomCat(const Config *para){
       fclose(fileRegIn);
 
       /*    or if the limits are defined by the user */
-      if(para->minDefinied[0]) xmin[0] = para->min[0];
-      if(para->maxDefinied[0]) xmax[0] = para->max[0];
-      if(para->minDefinied[1]) xmin[1] = para->min[1];
-      if(para->maxDefinied[1]) xmax[1] = para->max[1];
+      if(para->minDefined[0]) xmin[0] = para->min[0];
+      if(para->maxDefined[0]) xmax[0] = para->max[0];
+      if(para->minDefined[1]) xmin[1] = para->min[1];
+      if(para->maxDefined[1]) xmax[1] = para->max[1];
       /* print out limits */
       fprintf(stderr,"Mask limits:\n");
       fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
@@ -922,10 +920,16 @@ int randomCat(const Config *para){
       xmax[0] = para->max[0];
       xmin[1] = para->min[1];
       xmax[1] = para->max[1];
+      xmin[2] = para->min[2];
+      xmax[2] = para->max[2];
 
       /*    print out limits */
       fprintf(stderr,"limits:\n");
-      fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
+      if(para->minDefined[2]){
+         fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g -zmin %g -zmax %g\n", xmin[0],xmax[0],xmin[1],xmax[1],xmin[2],xmax[2]);
+      }else{
+         fprintf(stderr,"-xmin %g -xmax %g -ymin %g -ymax %g\n",xmin[0],xmax[0],xmin[1],xmax[1]);
+      }
       if(para->coordType == RADEC){
          area = (xmax[0] - xmin[0])*(sin(xmax[1]*PI/180.0) - sin(xmin[1]*PI/180.0))*180.0/PI;
       }else{
@@ -947,7 +951,6 @@ int randomCat(const Config *para){
             fits_report_error(stderr, status);
             exit(EXIT_FAILURE);
          }
-
          /*    define the name, datatype, and physical units for the columns */
          int tfields   = 3;   /* table will have 3 columns */
          char *ttype[] = { "ra", "dec", "z" };
@@ -959,7 +962,7 @@ int randomCat(const Config *para){
             tunit[0] = "pix";
             tunit[1] = "pix";
          }
-         if(para->nz || para->zrange){
+         if(para->nz || para->zrange || para->minDefined[2]){
             fits_create_tbl(fileOutFits, BINARY_TBL, 0, tfields, ttype, tform, tunit, "DATA", &status);
          }else{
             fits_create_tbl(fileOutFits, BINARY_TBL, 0, tfields-1, ttype, tform, tunit, "DATA", &status);
@@ -982,6 +985,10 @@ int randomCat(const Config *para){
             if(para->nz || para->zrange){
                z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
                fits_write_col(fileOutFits, TDOUBLE, 3, firstrow+i, firstelem, 1, &z, &status);
+            }
+            if(para->minDefined[2]){
+               x[2] = gsl_ran_flat(r,xmin[2],xmax[2]);
+               fits_write_col(fileOutFits, TDOUBLE, 3, firstrow+i, firstelem, 1,  &(x[2]), &status);
             }
             if (status) {
                fits_report_error(stderr, status);
@@ -1011,16 +1018,20 @@ int randomCat(const Config *para){
                x[1] = gsl_ran_flat(r,sin(xmin[1]*PI/180.0),sin(xmax[1]*PI/180.0));
                x[1] = asin(x[1])*180.0/PI;
             }
+            if(para->minDefined[2]){
+            }
             if(para->nz || para->zrange){
                z = gsl_histogram_pdf_sample (nz_PDF, gsl_ran_flat(r, 0.0, 1.0));
                fprintf(fileOut,"%f %f %f\n", x[0], x[1], z);
+            }else if(para->minDefined[2]){
+               x[2] = gsl_ran_flat(r,xmin[2],xmax[2]);
+               fprintf(fileOut,"%f %f %f\n", x[0], x[1], x[2]);
             }else{
                fprintf(fileOut,"%f %f\n", x[0], x[1]);
             }
          }
          fflush(stdout);
          fprintf(stderr,"\b\b\b\b100%%\n");
-
       }
 
    }else{

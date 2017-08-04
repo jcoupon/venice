@@ -1,5 +1,9 @@
 Version history
 
+v 4.0.4 - April 2017
+- added z coordinate when drawing randomd
+with no mask
+
 v 4.0.3 - April 2017
 - allows to set a different name for the flag
 in the fits output files
